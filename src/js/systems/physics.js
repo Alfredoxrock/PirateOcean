@@ -6,10 +6,10 @@ export function updatePlayerMovement(player, keys, dt) {
     // Lower level = faster ship (level 1 is fastest)
     const speedMultiplier = Math.max(1, 2 - (player.level * 0.08));
     const speed = CONFIG.PLAYER_ACCELERATION * speedMultiplier * 200;
-    
+
     let moveX = 0;
     let moveY = 0;
-    
+
     // Direct WASD movement
     if (keys['w'] || keys['arrowup']) {
         moveY = -1;
@@ -23,14 +23,14 @@ export function updatePlayerMovement(player, keys, dt) {
     if (keys['d'] || keys['arrowright']) {
         moveX = 1;
     }
-    
+
     // Normalize diagonal movement
     if (moveX !== 0 && moveY !== 0) {
         const len = Math.sqrt(moveX * moveX + moveY * moveY);
         moveX /= len;
         moveY /= len;
     }
-    
+
     // Apply movement
     if (moveX !== 0 || moveY !== 0) {
         player.vx = moveX * speed * dt;
