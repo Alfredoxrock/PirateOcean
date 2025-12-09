@@ -64,8 +64,18 @@ export function updatePveShipAI(ship, player, dt, cannonballs) {
         ship.y += Math.sin(ship.dir) * ship.speed * dt * 120;
     } else if (ship.state === 'attack') {
         ship.dir = Math.atan2(dy, dx);
-        ship.x += Math.cos(ship.dir) * ship.speed * dt * 30;
-        ship.y += Math.sin(ship.dir) * ship.speed * dt * 30;
+        
+        // Keep distance instead of stacking on player
+        const keepawayDist = 180;
+        if (dist > keepawayDist) {
+            ship.x += Math.cos(ship.dir) * ship.speed * dt * 40;
+            ship.y += Math.sin(ship.dir) * ship.speed * dt * 40;
+        } else if (dist < keepawayDist - 30) {
+            // Back away if too close
+            ship.x -= Math.cos(ship.dir) * ship.speed * dt * 25;
+            ship.y -= Math.sin(ship.dir) * ship.speed * dt * 25;
+        }
+        // Else maintain distance
 
         if (ship.cannonCooldown <= 0) {
             spawnCannonball(ship, player.x, player.y, 320 + ship.level * 20, cannonballs, player);
@@ -98,7 +108,8 @@ export function updateCannonballs(cannonballs, player, pveShips, dt) {
             if (!hit) {
                 for (const s of pveShips) {
                     const sd = Math.hypot(b.x - s.x, b.y - s.y);
-                    if (sd <= hitRadius && b.ownerId !== s.id) {
+                    // Only allow player cannonballs to hit NPCs (PvP disabled)
+                    if (sd <= hitRadius && b.ownerId === 'player') {
                         hit = s;
                         break;
                     }

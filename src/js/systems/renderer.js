@@ -57,8 +57,8 @@ export function renderGame(ctx, camera, map, player, cannonballs, canvas) {
     }
 
     // Player
-    drawShip(ctx, player.x, player.y, player.a, '#ffd700', 28, player.level || 1);
-    drawNameAndBar(ctx, player.x, player.y - 34, player.name || 'Captain', player.level || 1, (player.hp / player.maxHp) * 100);
+    drawShip(ctx, player.x, player.y, player.a, '#ffd700', 48, player.level || 1);
+    drawNameAndBar(ctx, player.x, player.y - 54, player.name || 'Captain', player.level || 1, (player.hp / player.maxHp) * 100);
 
     // Cannonballs
     for (const b of cannonballs) {
