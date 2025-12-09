@@ -32,55 +32,96 @@ export function spawnCannonball(owner, tx, ty, speed, cannonballs, player) {
 }
 
 export function updatePveShipAI(ship, player, dt, cannonballs) {
+    // Update timers
     ship.cannonCooldown = Math.max(0, ship.cannonCooldown - dt);
-    ship.stateTimer -= dt;
+    ship.stateTimer = (ship.stateTimer || 0) - dt;
 
+    // Relative vector to player
     const dx = player.x - ship.x;
     const dy = player.y - ship.y;
     const dist = Math.hypot(dx, dy);
+    const angleToPlayer = Math.atan2(dy, dx);
 
-    // State transitions
+    // Desired engagement distance scales with level
+    const desiredDist = clamp(220 + (6 - (ship.level || 1)) * 8, 140, 320);
+
+    // State selection
     if (dist < ship.aggroRange) {
-        if (dist <= ship.attackRange) {
-            ship.state = 'attack';
-        } else {
-            ship.state = 'chase';
-        }
+        ship.state = dist <= ship.attackRange ? 'attack' : 'chase';
     } else {
-        if (ship.stateTimer <= 0) {
+        if (!ship.state || ship.state === 'patrol') {
+            if (ship.stateTimer <= 0) {
+                ship.state = 'patrol';
+                ship.stateTimer = rand(2, 6);
+            }
+        } else {
             ship.state = 'patrol';
-            ship.stateTimer = rand(2, 5);
+            ship.stateTimer = rand(2, 6);
         }
     }
 
-    // Behavior
+    // Dodge incoming cannonballs (simple heuristic)
+    for (const b of cannonballs) {
+        if (b.ownerId === ship.id) continue;
+        const db = Math.hypot(b.x - ship.x, b.y - ship.y);
+        if (db < 110 && b.z > 0) {
+            const evadeAng = Math.atan2(b.vy, b.vx) + Math.PI / 2;
+            ship.x += Math.cos(evadeAng) * ship.speed * dt * 90;
+            ship.y += Math.sin(evadeAng) * ship.speed * dt * 90;
+            ship.cannonCooldown = Math.max(ship.cannonCooldown, 0.25);
+            ship.x = clamp(ship.x, 0, CONFIG.MAP_WIDTH);
+            ship.y = clamp(ship.y, 0, CONFIG.MAP_HEIGHT);
+            return;
+        }
+    }
+
+    // Behaviors
     if (ship.state === 'patrol') {
-        ship.dir += rand(-0.01, 0.01) * dt;
+        ship.dir += rand(-0.02, 0.02) * dt;
+        ship.x += Math.cos(ship.dir) * ship.speed * dt * 40;
+        ship.y += Math.sin(ship.dir) * ship.speed * dt * 40;
+    }
+    else if (ship.state === 'chase') {
+        // Move to flanking/broadside position around player
+        if (typeof ship._flankSide === 'undefined') ship._flankSide = Math.random() < 0.5 ? 1 : -1;
+        const flankAngle = angleToPlayer + (Math.PI / 2) * ship._flankSide;
+        const tx = player.x + Math.cos(flankAngle) * desiredDist;
+        const ty = player.y + Math.sin(flankAngle) * desiredDist;
+        const angToTarget = Math.atan2(ty - ship.y, tx - ship.x);
+        ship.dir = angToTarget;
+        ship.x += Math.cos(ship.dir) * ship.speed * dt * 80;
+        ship.y += Math.sin(ship.dir) * ship.speed * dt * 80;
+    }
+    else if (ship.state === 'attack') {
+        // Circle around player to present broadside
+        if (typeof ship._circlePhase === 'undefined') ship._circlePhase = Math.random() * Math.PI * 2;
+        ship._circlePhase += (0.5 + (ship.level || 1) * 0.05) * dt;
+        const circX = player.x + Math.cos(ship._circlePhase) * desiredDist;
+        const circY = player.y + Math.sin(ship._circlePhase) * desiredDist;
+        const angToCirc = Math.atan2(circY - ship.y, circX - ship.x);
+        ship.dir = angToCirc;
         ship.x += Math.cos(ship.dir) * ship.speed * dt * 60;
         ship.y += Math.sin(ship.dir) * ship.speed * dt * 60;
-    } else if (ship.state === 'chase') {
-        ship.dir = Math.atan2(dy, dx);
-        ship.x += Math.cos(ship.dir) * ship.speed * dt * 120;
-        ship.y += Math.sin(ship.dir) * ship.speed * dt * 120;
-    } else if (ship.state === 'attack') {
-        ship.dir = Math.atan2(dy, dx);
 
-        // Keep distance instead of stacking on player
-        const keepawayDist = 180;
-        if (dist > keepawayDist) {
-            ship.x += Math.cos(ship.dir) * ship.speed * dt * 40;
-            ship.y += Math.sin(ship.dir) * ship.speed * dt * 40;
-        } else if (dist < keepawayDist - 30) {
-            // Back away if too close
-            ship.x -= Math.cos(ship.dir) * ship.speed * dt * 25;
-            ship.y -= Math.sin(ship.dir) * ship.speed * dt * 25;
+        // If too close, back off
+        if (dist < desiredDist - 20) {
+            ship.x -= Math.cos(angleToPlayer) * ship.speed * dt * 30;
+            ship.y -= Math.sin(angleToPlayer) * ship.speed * dt * 30;
         }
-        // Else maintain distance
 
-        if (ship.cannonCooldown <= 0) {
-            spawnCannonball(ship, player.x, player.y, 320 + ship.level * 20, cannonballs, player);
-            ship.cannonCooldown = 1.5 - Math.min(1.0, ship.level * 0.05);
+        // Fire when roughly perpendicular to player (broadside)
+        const angDiff = Math.abs(((ship.dir - angleToPlayer) + Math.PI) % (Math.PI * 2) - Math.PI);
+        if (ship.cannonCooldown <= 0 && angDiff > 0.25 && angDiff < 1.6) {
+            spawnCannonball(ship, player.x, player.y, 320 + (ship.level || 1) * 26, cannonballs, player);
+            ship.cannonCooldown = 1.4 - Math.min(0.9, (ship.level || 1) * 0.04);
         }
+    }
+
+    // Separation from player to avoid stacking
+    const keepaway = 40 + (ship.size || 24);
+    if (dist < keepaway) {
+        ship.x -= (dx / (dist || 1)) * (keepaway - dist) * 0.6;
+        ship.y -= (dy / (dist || 1)) * (keepaway - dist) * 0.6;
     }
 
     ship.x = clamp(ship.x, 0, CONFIG.MAP_WIDTH);
