@@ -53,19 +53,24 @@ function startGame() {
 }
 
 function initializeGame() {
-    console.log('Game initialized! This is where your game logic starts.');
-    console.log('You would initialize Phaser.js or your game engine here.');
+    console.log('Starting lightweight game engine...');
 
-    // Example: Set initial values
-    updateHUD({
-        level: 1,
-        gold: 0,
-        health: 100,
-        xp: 0
-    });
+    // Update HUD with initial values
+    updateHUD({ level: 1, gold: 0, health: 100, xp: 0 });
 
-    // Simulate game running
-    alert('Game started! Press OK to continue.\n\nThis demo shows the menu system. You would integrate your game engine (Phaser.js, PixiJS, etc.) here.');
+    // Start the Game engine we added in game.js
+    try {
+        const playerName = localStorage.getItem('playerName') || 'Captain';
+        if (window.Game && typeof window.Game.start === 'function') {
+            window.Game.start({ name: playerName });
+        } else {
+            console.warn('Game engine not found.');
+            alert('Game engine not loaded. Check console for errors.');
+        }
+    } catch (err) {
+        console.error('Failed to start game engine', err);
+        alert('Failed to start game. See console for details.');
+    }
 }
 
 function showPauseMenu() {
