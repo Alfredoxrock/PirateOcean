@@ -30,6 +30,11 @@
     function generateIslands() {
         const islands = [];
         let attempts = 0;
+        // avoid placing islands too close to the player's spawn (center)
+        const centerX = MAP_WIDTH/2;
+        const centerY = MAP_HEIGHT/2;
+        const spawnClearRadius = 300;
+
         while (islands.length < NUM_ISLANDS && attempts < 2000) {
             attempts++;
             const r = Math.round(rand(60, 220));
@@ -37,6 +42,11 @@
             const y = Math.round(rand(r, MAP_HEIGHT - r));
             const pad = 20;
             let ok = true;
+            // skip islands that overlap the spawn clearance circle
+            const dxc = x - centerX;
+            const dyc = y - centerY;
+            const distc = Math.hypot(dxc, dyc);
+            if (distc < spawnClearRadius + r) ok = false;
             for (const other of islands) {
                 const dx = other.x - x;
                 const dy = other.y - y;
@@ -85,7 +95,7 @@
                 size: Math.round(rand(18, 42)),
                 // AI state
                 state: 'patrol',
-                stateTimer: rand(1,4),
+                stateTimer: rand(1, 4),
                 aggroRange: 400 + level * 20,
                 attackRange: 260 + level * 10,
                 cannonCooldown: 0
@@ -144,12 +154,12 @@
                     s.state = 'chase';
                 }
             } else {
-                if (s.stateTimer <= 0) { s.state = 'patrol'; s.stateTimer = rand(2,5); }
+                if (s.stateTimer <= 0) { s.state = 'patrol'; s.stateTimer = rand(2, 5); }
             }
 
             // behavior
             if (s.state === 'patrol') {
-                s.dir += rand(-0.01,0.01) * dt;
+                s.dir += rand(-0.01, 0.01) * dt;
                 s.x += Math.cos(s.dir) * s.speed * dt * 60;
                 s.y += Math.sin(s.dir) * s.speed * dt * 60;
             } else if (s.state === 'chase') {
@@ -164,10 +174,10 @@
                 s.y += Math.sin(s.dir) * s.speed * dt * 30;
                 // shoot if cooldown ready and roughly aimed
                 if (s.cannonCooldown <= 0) {
-                    const aimError = Math.abs(normalizeAngle(Math.atan2(dy,dx) - s.dir));
+                    const aimError = Math.abs(normalizeAngle(Math.atan2(dy, dx) - s.dir));
                     // allow some aim error
                     spawnCannonball(s, player.x, player.y, 320 + s.level * 20);
-                    s.cannonCooldown = 1.5 - Math.min(1.0, s.level*0.05);
+                    s.cannonCooldown = 1.5 - Math.min(1.0, s.level * 0.05);
                 }
             }
 
@@ -206,16 +216,16 @@
                     if (hit.hp <= 0) {
                         // simple respawn / remove
                         if (hit === player) {
-                            player.x = MAP_WIDTH/2; player.y = MAP_HEIGHT/2; player.hp = player.maxHp; // respawn
+                            player.x = MAP_WIDTH / 2; player.y = MAP_HEIGHT / 2; player.hp = player.maxHp; // respawn
                         } else {
                             // respawn PvE ship somewhere else
-                            hit.x = rand(100, MAP_WIDTH-100); hit.y = rand(100, MAP_HEIGHT-100); hit.hp = hit.maxHp; hit.state = 'patrol';
+                            hit.x = rand(100, MAP_WIDTH - 100); hit.y = rand(100, MAP_HEIGHT - 100); hit.hp = hit.maxHp; hit.state = 'patrol';
                         }
                     }
                 }
 
                 // remove cannonball
-                cannonballs.splice(i,1);
+                cannonballs.splice(i, 1);
             }
         }
 
@@ -225,19 +235,29 @@
             const dy = player.y - isl.y;
             const d = Math.hypot(dx, dy);
             if (d < isl.r + 12) {
-                const overlap = isl.r + 12 - d;
+                const desiredDist = isl.r + 12 + 2; // safety margin of 2px
                 if (d > 0) {
-                    player.x += (dx / d) * overlap;
-                    player.y += (dy / d) * overlap;
+                    // place player exactly at island edge + margin
+                    const nx = dx / d;
+                    const ny = dy / d;
+                    player.x = isl.x + nx * desiredDist;
+                    player.y = isl.y + ny * desiredDist;
                 } else {
-                    // push randomly
-                    player.x += overlap;
-                    player.y += overlap;
+                    // if exactly centered, push out in a random direction
+                    const ang = Math.random() * Math.PI * 2;
+                    player.x = isl.x + Math.cos(ang) * desiredDist;
+                    player.y = isl.y + Math.sin(ang) * desiredDist;
                 }
+                // reduce velocity to avoid repeated re-collision
+                player.vx *= 0.2;
+                player.vy *= 0.2;
                 // slight damage
-                player.hp = Math.max(0, player.hp - 0.02 * overlap);
+                player.hp = Math.max(0, player.hp - 0.02 * (desiredDist));
             }
         }
+
+    // update camera so it follows the player each frame
+    updateCamera();
 
         // update HUD
         if (window.gameMenu && window.gameMenu.updateHUD) {
@@ -308,13 +328,13 @@
             const shadowAlpha = clamp(1 - (b.z / 150), 0.25, 0.85);
             const shadowSize = 6 + (1 - clamp(b.z / 150, 0, 1)) * 8;
             ctx.fillStyle = `rgba(0,0,0,${0.35 * shadowAlpha})`;
-            ctx.beginPath(); ctx.ellipse(b.x, b.y, shadowSize, shadowSize*0.5, 0, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(b.x, b.y, shadowSize, shadowSize * 0.5, 0, 0, Math.PI * 2); ctx.fill();
 
             // ball
             ctx.fillStyle = '#222';
             const scale = 1 + (b.z / 120);
             const size = Math.max(3, Math.round(4 * scale));
-            ctx.beginPath(); ctx.arc(b.x, b.y - Math.max(0, b.z), size, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(b.x, b.y - Math.max(0, b.z), size, 0, Math.PI * 2); ctx.fill();
         }
 
         ctx.restore();
