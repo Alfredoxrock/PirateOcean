@@ -15,9 +15,12 @@
     // State
     let canvas, ctx, camera;
     let map = { islands: [], creatures: [], pveShips: [] };
+    let cannonballs = [];
     let player = null;
     let keys = {};
     let running = false;
+
+    const GRAVITY = 0.8; // affects cannonball arc (higher = faster drop)
 
     // Utilities
     function rand(min, max) { return Math.random() * (max - min) + min; }
@@ -80,6 +83,12 @@
                 maxHp: maxHp,
                 level: level,
                 size: Math.round(rand(18, 42)),
+                // AI state
+                state: 'patrol',
+                stateTimer: rand(1,4),
+                aggroRange: 400 + level * 20,
+                attackRange: 260 + level * 10,
+                cannonCooldown: 0
             });
         }
         return ships;
@@ -116,22 +125,97 @@
         player.x = clamp(player.x, 0, MAP_WIDTH);
         player.y = clamp(player.y, 0, MAP_HEIGHT);
 
-        // PvE ships simple wandering + occasional chase when close
+        // PvE ships AI: patrol, chase, attack
         for (const s of map.pveShips) {
-            // wander
-            s.dir += rand(-0.02, 0.02) * dt;
-            s.x += Math.cos(s.dir) * s.speed * dt * 60;
-            s.y += Math.sin(s.dir) * s.speed * dt * 60;
-            s.x = clamp(s.x, 0, MAP_WIDTH);
-            s.y = clamp(s.y, 0, MAP_HEIGHT);
-            // if player is close chase a bit
+            // reduce cooldowns/timers
+            s.cannonCooldown = Math.max(0, s.cannonCooldown - dt);
+            s.stateTimer -= dt;
+
             const dx = player.x - s.x;
             const dy = player.y - s.y;
             const dist = Math.hypot(dx, dy);
-            if (dist < 300) {
+
+            // state transitions
+            if (dist < s.aggroRange) {
+                // player seen -> chase or attack
+                if (dist <= s.attackRange) {
+                    s.state = 'attack';
+                } else {
+                    s.state = 'chase';
+                }
+            } else {
+                if (s.stateTimer <= 0) { s.state = 'patrol'; s.stateTimer = rand(2,5); }
+            }
+
+            // behavior
+            if (s.state === 'patrol') {
+                s.dir += rand(-0.01,0.01) * dt;
+                s.x += Math.cos(s.dir) * s.speed * dt * 60;
+                s.y += Math.sin(s.dir) * s.speed * dt * 60;
+            } else if (s.state === 'chase') {
                 s.dir = Math.atan2(dy, dx);
-                s.x += Math.cos(s.dir) * s.speed * dt * 100;
-                s.y += Math.sin(s.dir) * s.speed * dt * 100;
+                // move towards player
+                s.x += Math.cos(s.dir) * s.speed * dt * 120;
+                s.y += Math.sin(s.dir) * s.speed * dt * 120;
+            } else if (s.state === 'attack') {
+                // face player but don't ram; minimal repositioning
+                s.dir = Math.atan2(dy, dx);
+                s.x += Math.cos(s.dir) * s.speed * dt * 30;
+                s.y += Math.sin(s.dir) * s.speed * dt * 30;
+                // shoot if cooldown ready and roughly aimed
+                if (s.cannonCooldown <= 0) {
+                    const aimError = Math.abs(normalizeAngle(Math.atan2(dy,dx) - s.dir));
+                    // allow some aim error
+                    spawnCannonball(s, player.x, player.y, 320 + s.level * 20);
+                    s.cannonCooldown = 1.5 - Math.min(1.0, s.level*0.05);
+                }
+            }
+
+            s.x = clamp(s.x, 0, MAP_WIDTH);
+            s.y = clamp(s.y, 0, MAP_HEIGHT);
+        }
+
+        // update cannonballs
+        for (let i = cannonballs.length - 1; i >= 0; i--) {
+            const b = cannonballs[i];
+            // integrate
+            b.x += b.vx * dt * 60;
+            b.y += b.vy * dt * 60;
+            b.vz -= GRAVITY * dt * 60; // gravity lowers vz
+            b.z += b.vz * dt * 60;
+            b.travelTime += dt;
+
+            // shadow radius/scale handled on draw
+            // impact when z <= 0 (ground)
+            if (b.z <= 0) {
+                // apply damage to nearest ship within hitRadius (player and PvE)
+                const hitRadius = 28;
+                let hit = null;
+                // check player
+                const pd = Math.hypot(b.x - player.x, b.y - player.y);
+                if (pd <= hitRadius && b.ownerId !== 'player') { hit = player; }
+                // check pve ships
+                if (!hit) {
+                    for (const s of map.pveShips) {
+                        const sd = Math.hypot(b.x - s.x, b.y - s.y);
+                        if (sd <= hitRadius && b.ownerId !== s.id) { hit = s; break; }
+                    }
+                }
+                if (hit) {
+                    hit.hp = (hit.hp || hit.maxHp || 50) - (b.damage || 25);
+                    if (hit.hp <= 0) {
+                        // simple respawn / remove
+                        if (hit === player) {
+                            player.x = MAP_WIDTH/2; player.y = MAP_HEIGHT/2; player.hp = player.maxHp; // respawn
+                        } else {
+                            // respawn PvE ship somewhere else
+                            hit.x = rand(100, MAP_WIDTH-100); hit.y = rand(100, MAP_HEIGHT-100); hit.hp = hit.maxHp; hit.state = 'patrol';
+                        }
+                    }
+                }
+
+                // remove cannonball
+                cannonballs.splice(i,1);
             }
         }
 
@@ -218,6 +302,21 @@
         drawShip(player.x, player.y, player.a, '#ffd700', 28);
         drawNameAndBar(player.x, player.y - 34, player.name || 'Captain', player.level || 1, (player.hp / player.maxHp) * 100);
 
+        // cannonballs (draw shadow and ball with simple height-based scale)
+        for (const b of cannonballs) {
+            // shadow
+            const shadowAlpha = clamp(1 - (b.z / 150), 0.25, 0.85);
+            const shadowSize = 6 + (1 - clamp(b.z / 150, 0, 1)) * 8;
+            ctx.fillStyle = `rgba(0,0,0,${0.35 * shadowAlpha})`;
+            ctx.beginPath(); ctx.ellipse(b.x, b.y, shadowSize, shadowSize*0.5, 0, 0, Math.PI*2); ctx.fill();
+
+            // ball
+            ctx.fillStyle = '#222';
+            const scale = 1 + (b.z / 120);
+            const size = Math.max(3, Math.round(4 * scale));
+            ctx.beginPath(); ctx.arc(b.x, b.y - Math.max(0, b.z), size, 0, Math.PI*2); ctx.fill();
+        }
+
         ctx.restore();
     }
 
@@ -259,7 +358,7 @@
         const bx = x - barW / 2;
         const by = y;
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        roundRect(ctx, bx - padding/2, by - padding/2, barW + padding, barH + padding, 4, true, false);
+        roundRect(ctx, bx - padding / 2, by - padding / 2, barW + padding, barH + padding, 4, true, false);
         // health fill
         const pct = clamp(healthPct, 0, 100) / 100;
         const fillW = Math.round(barW * pct);
@@ -324,6 +423,10 @@
             hp: 100, maxHp: 100,
             level: (opts && opts.level) || 1
         };
+
+        // player weapon properties
+        player.weaponRange = 420;
+        player.cannonCooldown = 0;
 
         // initial HUD
         if (window.gameMenu && window.gameMenu.updateHUD) {
