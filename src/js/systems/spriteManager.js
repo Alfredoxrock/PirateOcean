@@ -24,7 +24,7 @@ export class SpriteManager {
     }
 
     async loadAll() {
-        // Player ships (different tiers)
+        // Player ship sprite sheet (16 directional frames in a grid)
         this.loadSprite('player_ship_tier1', 'assets/sprites/ShipLevel1.png');
         this.loadSprite('player_ship_tier2', 'assets/sprites/player_ship_tier2.png');
         this.loadSprite('player_ship_tier3', 'assets/sprites/player_ship_tier3.png');
@@ -62,6 +62,20 @@ export class SpriteManager {
 
     getSprite(name) {
         return this.sprites[name] || null;
+    }
+
+    // Get sprite frame from sprite sheet based on angle (16 directions)
+    getSpriteFrame(spriteName, angle) {
+        const sprite = this.sprites[spriteName];
+        if (!sprite || !sprite.complete) return null;
+
+        // Normalize angle to 0-360
+        let normalizedAngle = ((angle * 180 / Math.PI) % 360 + 360) % 360;
+
+        // Calculate which of 16 frames to use (0 = right, going counter-clockwise)
+        const frameIndex = Math.round(normalizedAngle / 22.5) % 16;
+
+        return { sprite, frameIndex };
     }
 
     isLoaded() {

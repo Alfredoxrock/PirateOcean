@@ -82,21 +82,38 @@ export function renderGame(ctx, camera, map, player, cannonballs, canvas) {
 function drawShip(ctx, x, y, angle, color, size, level = 1) {
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(angle);
 
     // Try to use sprite if available
     const isPlayer = (color === '#ffd700');
     const spriteName = isPlayer ? `player_ship_tier${level}` : 'enemy_ship';
-    const sprite = spriteManager.getSprite(spriteName);
+    const frameData = spriteManager.getSpriteFrame(spriteName, angle);
 
-    if (sprite && sprite.complete) {
-        // Draw sprite centered
-        const scale = (size * 2) / Math.max(sprite.width, sprite.height);
-        const w = sprite.width * scale;
-        const h = sprite.height * scale;
-        ctx.drawImage(sprite, -w / 2, -h / 2, w, h);
+    if (frameData && frameData.sprite) {
+        const { sprite, frameIndex } = frameData;
+
+        // Sprite sheet is 4x4 grid (16 frames)
+        const cols = 4;
+        const rows = 4;
+        const frameWidth = sprite.width / cols;
+        const frameHeight = sprite.height / rows;
+
+        // Calculate source position in sprite sheet
+        const srcX = (frameIndex % cols) * frameWidth;
+        const srcY = Math.floor(frameIndex / cols) * frameHeight;
+
+        // Draw the specific frame
+        const scale = (size * 2) / Math.max(frameWidth, frameHeight);
+        const w = frameWidth * scale;
+        const h = frameHeight * scale;
+
+        ctx.drawImage(
+            sprite,
+            srcX, srcY, frameWidth, frameHeight,  // source
+            -w / 2, -h / 2, w, h                   // destination
+        );
     } else {
         // Fallback: draw triangle ship
+        ctx.rotate(angle);
         ctx.beginPath();
         ctx.moveTo(size, 0);
         ctx.lineTo(-size * 0.6, size * 0.6);
