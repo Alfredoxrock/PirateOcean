@@ -25,7 +25,16 @@ export class SpriteManager {
 
     async loadAll() {
         // Player ships (different tiers)
-        this.loadSprite('player_ship', 'assets/sprites/player_ship.png');
+        this.loadSprite('player_ship_tier1', 'assets/sprites/player_ship_tier1.png');
+        this.loadSprite('player_ship_tier2', 'assets/sprites/player_ship_tier2.png');
+        this.loadSprite('player_ship_tier3', 'assets/sprites/player_ship_tier3.png');
+        this.loadSprite('player_ship_tier4', 'assets/sprites/player_ship_tier4.png');
+        this.loadSprite('player_ship_tier5', 'assets/sprites/player_ship_tier5.png');
+        this.loadSprite('player_ship_tier6', 'assets/sprites/player_ship_tier6.png');
+        this.loadSprite('player_ship_tier7', 'assets/sprites/player_ship_tier7.png');
+        this.loadSprite('player_ship_tier8', 'assets/sprites/player_ship_tier8.png');
+        this.loadSprite('player_ship_tier9', 'assets/sprites/player_ship_tier9.png');
+        this.loadSprite('player_ship_tier10', 'assets/sprites/player_ship_tier10.png');
 
         // NPC ships
         this.loadSprite('enemy_ship', 'assets/sprites/enemy_ship.png');

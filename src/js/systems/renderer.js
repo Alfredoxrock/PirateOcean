@@ -79,14 +79,14 @@ export function renderGame(ctx, camera, map, player, cannonballs, canvas) {
 
     ctx.restore();
 }
-function drawShip(ctx, x, y, angle, color, size) {
+function drawShip(ctx, x, y, angle, color, size, level = 1) {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(angle);
 
     // Try to use sprite if available
     const isPlayer = (color === '#ffd700');
-    const spriteName = isPlayer ? 'player_ship' : 'enemy_ship';
+    const spriteName = isPlayer ? `player_ship_tier${level}` : 'enemy_ship';
     const sprite = spriteManager.getSprite(spriteName);
 
     if (sprite && sprite.complete) {
