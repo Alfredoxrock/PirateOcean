@@ -64,7 +64,7 @@ export function updatePveShipAI(ship, player, dt, cannonballs) {
         ship.y += Math.sin(ship.dir) * ship.speed * dt * 120;
     } else if (ship.state === 'attack') {
         ship.dir = Math.atan2(dy, dx);
-        
+
         // Keep distance instead of stacking on player
         const keepawayDist = 180;
         if (dist > keepawayDist) {

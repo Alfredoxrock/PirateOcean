@@ -3,29 +3,51 @@ import { clamp } from '../utils/math.js';
 import { CONFIG } from '../core/config.js';
 
 export function updatePlayerMovement(player, keys, dt) {
-    const acc = CONFIG.PLAYER_ACCELERATION;
+    // Lower level = faster ship (level 1 is fastest)
+    const speedMultiplier = Math.max(1, 2 - (player.level * 0.08));
+    const speed = CONFIG.PLAYER_ACCELERATION * speedMultiplier * 200;
+    
+    let moveX = 0;
+    let moveY = 0;
+    
+    // Direct WASD movement
     if (keys['w'] || keys['arrowup']) {
-        player.vx += Math.cos(player.a) * acc * dt;
-        player.vy += Math.sin(player.a) * acc * dt;
+        moveY = -1;
     }
     if (keys['s'] || keys['arrowdown']) {
-        player.vx *= 0.98;
-        player.vy *= 0.98;
+        moveY = 1;
     }
     if (keys['a'] || keys['arrowleft']) {
-        player.a -= CONFIG.PLAYER_ROTATION_SPEED * dt;
+        moveX = -1;
     }
     if (keys['d'] || keys['arrowright']) {
-        player.a += CONFIG.PLAYER_ROTATION_SPEED * dt;
+        moveX = 1;
+    }
+    
+    // Normalize diagonal movement
+    if (moveX !== 0 && moveY !== 0) {
+        const len = Math.sqrt(moveX * moveX + moveY * moveY);
+        moveX /= len;
+        moveY /= len;
+    }
+    
+    // Apply movement
+    if (moveX !== 0 || moveY !== 0) {
+        player.vx = moveX * speed * dt;
+        player.vy = moveY * speed * dt;
+        player.a = Math.atan2(moveY, moveX);
+    } else {
+        player.vx *= 0.85;
+        player.vy *= 0.85;
     }
 
     // Apply velocity
     player.x += player.vx * dt;
     player.y += player.vy * dt;
 
-    // Damping
-    player.vx *= CONFIG.PLAYER_DAMPING;
-    player.vy *= CONFIG.PLAYER_DAMPING;
+    // No damping since we're using direct movement
+    // player.vx *= CONFIG.PLAYER_DAMPING;
+    // player.vy *= CONFIG.PLAYER_DAMPING;
 
     // Clamp to map
     player.x = clamp(player.x, 0, CONFIG.MAP_WIDTH);
