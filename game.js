@@ -61,14 +61,24 @@
 
     function generatePveShips() {
         const ships = [];
+        const pirateNames = [
+            'Blackbeard', 'Anne Bonny', 'Calico Jack', 'Bartholomew Roberts',
+            'Henry Morgan', 'William Kidd', 'Mary Read', 'Edward Low',
+            'Charles Vane', "Fran\u00e7ois l'Olonnais"
+        ];
         for (let i = 0; i < NUM_PVE_SHIPS; i++) {
+            const level = Math.max(1, Math.round(rand(1, 8)));
+            const maxHp = 30 + level * 20;
             ships.push({
                 id: i,
+                name: pirateNames[i % pirateNames.length],
                 x: rand(100, MAP_WIDTH - 100),
                 y: rand(100, MAP_HEIGHT - 100),
                 speed: rand(20, 60) / 100,
                 dir: rand(0, Math.PI * 2),
-                hp: 30 + Math.round(rand(0, 70)),
+                hp: maxHp,
+                maxHp: maxHp,
+                level: level,
                 size: Math.round(rand(18, 42)),
             });
         }
@@ -198,12 +208,15 @@
         }
 
         // PvE ships
+        // PvE ships (draw ship, then name/level/health)
         for (const s of map.pveShips) {
             drawShip(s.x, s.y, s.dir, '#ff5252', s.size);
+            drawNameAndBar(s.x, s.y - s.size - 6, s.name || 'Enemy', s.level || 1, (s.hp / (s.maxHp || 50)) * 100);
         }
 
-        // player
+        // player (draw ship, then name/level/health)
         drawShip(player.x, player.y, player.a, '#ffd700', 28);
+        drawNameAndBar(player.x, player.y - 34, player.name || 'Captain', player.level || 1, (player.hp / player.maxHp) * 100);
 
         ctx.restore();
     }
@@ -224,6 +237,55 @@
         ctx.strokeStyle = '#6d4c41'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(-size * 0.2, -size * 0.2); ctx.lineTo(-size * 0.2, size * 0.2); ctx.stroke();
         ctx.restore();
+    }
+
+    // Draw name, level and a small health bar above a ship
+    function drawNameAndBar(x, y, name, level, healthPct) {
+        const padding = 6;
+        const barW = 80;
+        const barH = 8;
+        // name text
+        ctx.save();
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        // outline for readability
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+        ctx.strokeText(name + ' (Lv ' + level + ')', x, y - 10);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(name + ' (Lv ' + level + ')', x, y - 10);
+
+        // health bar background
+        const bx = x - barW / 2;
+        const by = y;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        roundRect(ctx, bx - padding/2, by - padding/2, barW + padding, barH + padding, 4, true, false);
+        // health fill
+        const pct = clamp(healthPct, 0, 100) / 100;
+        const fillW = Math.round(barW * pct);
+        const grad = ctx.createLinearGradient(bx, by, bx + barW, by);
+        grad.addColorStop(0, '#43a047');
+        grad.addColorStop(1, '#c62828');
+        ctx.fillStyle = grad;
+        roundRect(ctx, bx, by, fillW, barH, 3, true, false);
+        // border
+        ctx.strokeStyle = '#ffffff33'; ctx.lineWidth = 1;
+        roundRect(ctx, bx, by, barW, barH, 3, false, true);
+        ctx.restore();
+    }
+
+    // small helper to draw rounded rects
+    function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+        if (typeof r === 'undefined') r = 5;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+        if (fill) ctx.fill();
+        if (stroke) ctx.stroke();
     }
 
     // Main loop
@@ -259,7 +321,8 @@
             x: MAP_WIDTH / 2,
             y: MAP_HEIGHT / 2,
             vx: 0, vy: 0, a: 0,
-            hp: 100, maxHp: 100
+            hp: 100, maxHp: 100,
+            level: (opts && opts.level) || 1
         };
 
         // initial HUD
