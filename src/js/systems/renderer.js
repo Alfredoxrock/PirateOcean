@@ -113,7 +113,6 @@ function drawShip(ctx, x, y, angle, color, size) {
     }
 
     ctx.restore();
-} ctx.restore();
 }
 
 function drawNameAndBar(ctx, x, y, name, level, healthPct) {
