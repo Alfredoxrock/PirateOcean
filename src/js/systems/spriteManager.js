@@ -71,10 +71,9 @@ export class SpriteManager {
 
         // Normalize angle to 0-360 degrees
         let normalizedAngle = ((angle * 180 / Math.PI) % 360 + 360) % 360;
-        
-        // Rotate by 90 degrees to match sprite sheet layout
-        // (sprite sheet has up at 0, we have right at 0)
-        normalizedAngle = (normalizedAngle + 90) % 360;
+
+        // Flip 180 degrees and subtract 90 to match sprite sheet layout
+        normalizedAngle = (normalizedAngle + 180 - 90) % 360;
 
         // Calculate which of 16 frames to use (clockwise from top)
         const frameIndex = Math.round(normalizedAngle / 22.5) % 16;
