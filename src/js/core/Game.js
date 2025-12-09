@@ -1,12 +1,12 @@
 // Main game orchestrator
-import { CONFIG } from './core/config.js';
-import { clamp } from './utils/math.js';
-import { generateIslands, generateCreatures } from './systems/mapGenerator.js';
-import { generatePveShips, createPlayer } from './entities/Ship.js';
-import { updatePlayerMovement, handleIslandCollisions, updateCamera } from './systems/physics.js';
-import { updatePveShipAI, updateCannonballs } from './systems/combat.js';
-import { renderGame } from './systems/renderer.js';
-import { spriteManager } from './systems/spriteManager.js';
+import { CONFIG } from './config.js';
+import { clamp } from '../utils/math.js';
+import { generateIslands, generateCreatures } from '../systems/mapGenerator.js';
+import { generatePveShips, createPlayer } from '../entities/Ship.js';
+import { updatePlayerMovement, handleIslandCollisions, updateCamera } from '../systems/physics.js';
+import { updatePveShipAI, updateCannonballs } from '../systems/combat.js';
+import { renderGame } from '../systems/renderer.js';
+import { spriteManager } from '../systems/spriteManager.js';
 
 class Game {
     constructor() {

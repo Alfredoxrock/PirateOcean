@@ -1,7 +1,7 @@
 // Rendering system
 import { clamp } from '../utils/math.js';
 import { CONFIG } from '../core/config.js';
-import { spriteManager } from './spriteManager.js';
+import { spriteManager } from '../systems/spriteManager.js';
 
 export function renderGame(ctx, camera, map, player, cannonballs, canvas) {
     ctx.save();
