@@ -25,14 +25,50 @@
     // Utilities
     function rand(min, max) { return Math.random() * (max - min) + min; }
     function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    function normalizeAngle(a) {
+        while (a <= -Math.PI) a += Math.PI * 2;
+        while (a > Math.PI) a -= Math.PI * 2;
+        return a;
+    }
+
+    // Spawn a cannonball from `owner` aimed at (tx,ty). `speed` is horizontal speed (px/s)
+    function spawnCannonball(owner, tx, ty, speed) {
+        const ox = owner.x;
+        const oy = owner.y;
+        const dx = tx - ox;
+        const dy = ty - oy;
+        const dist = Math.hypot(dx, dy);
+        const horizSpeed = Math.max(60, speed || 300); // px/s
+
+        // estimate travel time and initial vertical velocity to land at t
+        const travelTime = clamp(dist / horizSpeed, 0.5, 3.0);
+        const initZ = 40 + Math.min(80, dist * 0.03); // higher for longer shots
+        const vz = (initZ + 0.5 * GRAVITY * travelTime * travelTime) / travelTime;
+
+        const vx = dx / travelTime;
+        const vy = dy / travelTime;
+
+        const b = {
+            x: ox,
+            y: oy,
+            z: initZ,
+            vx: vx,
+            vy: vy,
+            vz: vz,
+            ownerId: (owner === player) ? 'player' : owner.id,
+            damage: 20 + ((owner.level) ? owner.level * 4 : 0),
+            travelTime: 0
+        };
+        cannonballs.push(b);
+    }
 
     // Procedural generation: islands as non-overlapping circles
     function generateIslands() {
         const islands = [];
         let attempts = 0;
         // avoid placing islands too close to the player's spawn (center)
-        const centerX = MAP_WIDTH/2;
-        const centerY = MAP_HEIGHT/2;
+        const centerX = MAP_WIDTH / 2;
+        const centerY = MAP_HEIGHT / 2;
         const spawnClearRadius = 300;
 
         while (islands.length < NUM_ISLANDS && attempts < 2000) {
@@ -120,7 +156,7 @@
     function update(dt) {
         if (!player) return;
         // player movement
-        const acc = 0.18;
+        const acc = 0.32; // increased acceleration for snappier control
         if (keys['w'] || keys['arrowup']) { player.vx += Math.cos(player.a) * acc * dt; player.vy += Math.sin(player.a) * acc * dt; }
         if (keys['s'] || keys['arrowdown']) { player.vx *= 0.98; player.vy *= 0.98; }
         if (keys['a'] || keys['arrowleft']) { player.a -= 0.06 * dt; }
@@ -256,8 +292,8 @@
             }
         }
 
-    // update camera so it follows the player each frame
-    updateCamera();
+        // update camera so it follows the player each frame
+        updateCamera();
 
         // update HUD
         if (window.gameMenu && window.gameMenu.updateHUD) {
