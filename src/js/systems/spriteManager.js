@@ -25,7 +25,7 @@ export class SpriteManager {
 
     async loadAll() {
         // Player ships (different tiers)
-        this.loadSprite('player_ship_tier1', 'assets/sprites/player_ship_tier1.png');
+        this.loadSprite('player_ship_tier1', 'assets/sprites/ShipLevel1.png');
         this.loadSprite('player_ship_tier2', 'assets/sprites/player_ship_tier2.png');
         this.loadSprite('player_ship_tier3', 'assets/sprites/player_ship_tier3.png');
         this.loadSprite('player_ship_tier4', 'assets/sprites/player_ship_tier4.png');

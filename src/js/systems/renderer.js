@@ -52,12 +52,12 @@ export function renderGame(ctx, camera, map, player, cannonballs, canvas) {
 
     // PvE ships
     for (const s of map.pveShips) {
-        drawShip(ctx, s.x, s.y, s.dir, '#ff5252', s.size);
+        drawShip(ctx, s.x, s.y, s.dir, '#ff5252', s.size, s.level || 1);
         drawNameAndBar(ctx, s.x, s.y - s.size - 6, s.name || 'Enemy', s.level || 1, (s.hp / (s.maxHp || 50)) * 100);
     }
 
     // Player
-    drawShip(ctx, player.x, player.y, player.a, '#ffd700', 28);
+    drawShip(ctx, player.x, player.y, player.a, '#ffd700', 28, player.level || 1);
     drawNameAndBar(ctx, player.x, player.y - 34, player.name || 'Captain', player.level || 1, (player.hp / player.maxHp) * 100);
 
     // Cannonballs
