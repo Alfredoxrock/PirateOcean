@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pirate Ocean - Survive the Seas</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Main Menu -->
+    <div id="mainMenu" class="menu-container active">
+        <div class="ocean-background"></div>
+        <div class="menu-content">
+            <h1 class="game-title">
+                <span class="title-pirate">PIRATE</span>
+                <span class="title-ocean">OCEAN</span>
+            </h1>
+            <p class="game-subtitle">Survive the Seas, Rule the Waves</p>
+
+            <div class="menu-buttons">
+                <button class="menu-btn primary" onclick="showPlayerSetup()">
+                    <span class="btn-icon">⚓</span>
+                    Start Adventure
+                </button>
+                <button class="menu-btn" onclick="showHowToPlay()">
+                    <span class="btn-icon">📜</span>
+                    How to Play
+                </button>
+                <button class="menu-btn" onclick="showLeaderboard()">
+                    <span class="btn-icon">🏆</span>
+                    Leaderboard
+                </button>
+                <button class="menu-btn" onclick="showSettings()">
+                    <span class="btn-icon">⚙️</span>
+                    Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Player Setup Menu -->
+    <div id="playerSetup" class="menu-container">
+        <div class="ocean-background"></div>
+        <div class="menu-content">
+            <h2 class="menu-heading">Choose Your Ship</h2>
+
+            <div class="ship-selection">
+                <div class="ship-card" data-tier="1">
+                    <div class="ship-preview">🚢</div>
+                    <h3>Rickety Sloop</h3>
+                    <p class="ship-stats">Speed: ★★★☆☆ | Armor: ★☆☆☆☆ | Damage: ★☆☆☆☆</p>
+                    <p class="ship-description">Fast but fragile starter ship</p>
+                </div>
+            </div>
+
+            <div class="player-name-section">
+                <label for="playerName">Captain's Name:</label>
+                <input type="text" id="playerName" maxlength="20" placeholder="Enter your name...">
+            </div>
+
+            <div class="menu-buttons">
+                <button class="menu-btn primary" onclick="startGame()">
+                    <span class="btn-icon">⚔️</span>
+                    Set Sail!
+                </button>
+                <button class="menu-btn secondary" onclick="showMainMenu()">
+                    <span class="btn-icon">◀</span>
+                    Back
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- How to Play Menu -->
+    <div id="howToPlay" class="menu-container">
+        <div class="ocean-background"></div>
+        <div class="menu-content scrollable">
+            <h2 class="menu-heading">How to Play</h2>
+
+            <div class="info-panel">
+                <div class="info-section">
+                    <h3>🎮 Controls</h3>
+                    <ul>
+                        <li><strong>WASD</strong> or <strong>Arrow Keys</strong> - Move your ship</li>
+                        <li><strong>Mouse</strong> - Aim cannons</li>
+                        <li><strong>Left Click</strong> or <strong>Space</strong> - Fire cannons</li>
+                        <li><strong>E</strong> - Collect treasure</li>
+                        <li><strong>Tab</strong> - View stats</li>
+                    </ul>
+                </div>
+
+                <div class="info-section">
+                    <h3>⚔️ Combat</h3>
+                    <ul>
+                        <li>Destroy enemy ships to gain XP and level up</li>
+                        <li>Each level unlocks better ships and weapons</li>
+                        <li>Watch out for famous pirate NPCs - they're tough!</li>
+                        <li>PvP: Other players can attack you at any time</li>
+                    </ul>
+                </div>
+
+                <div class="info-section">
+                    <h3>💰 Treasures</h3>
+                    <ul>
+                        <li>Collect floating treasures for gold and XP</li>
+                        <li>Gold can be used to upgrade your ship</li>
+                        <li>Destroyed ships drop loot</li>
+                    </ul>
+                </div>
+
+                <div class="info-section">
+                    <h3>🗺️ World</h3>
+                    <ul>
+                        <li>Navigate around islands to avoid collisions</li>
+                        <li>Watch for sea creatures - they're dangerous!</li>
+                        <li>The ocean is infinite - explore freely</li>
+                    </ul>
+                </div>
+
+                <div class="info-section">
+                    <h3>📊 Ship Tiers</h3>
+                    <p>Progress through 10 ship tiers:</p>
+                    <ol>
+                        <li>Rickety Sloop</li>
+                        <li>Coastal Cutter</li>
+                        <li>Merchant Brig</li>
+                        <li>War Sloop</li>
+                        <li>Corsair Frigate</li>
+                        <li>Battle Galleon</li>
+                        <li>Heavy Man-o-War</li>
+                        <li>Imperial Warship</li>
+                        <li>Legendary Dreadnought</li>
+                        <li>Mythic Leviathan</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="menu-buttons">
+                <button class="menu-btn secondary" onclick="showMainMenu()">
+                    <span class="btn-icon">◀</span>
+                    Back
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaderboard Menu -->
+    <div id="leaderboard" class="menu-container">
+        <div class="ocean-background"></div>
+        <div class="menu-content">
+            <h2 class="menu-heading">⚓ Leaderboard ⚓</h2>
+
+            <div class="leaderboard-panel">
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Captain</th>
+                            <th>Level</th>
+                            <th>Kills</th>
+                            <th>Gold</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboardBody">
+                        <tr>
+                            <td class="rank gold">1</td>
+                            <td>⚡ Captain Storm</td>
+                            <td>10</td>
+                            <td>342</td>
+                            <td>98,450</td>
+                        </tr>
+                        <tr>
+                            <td class="rank silver">2</td>
+                            <td>🔥 BlackWave</td>
+                            <td>9</td>
+                            <td>287</td>
+                            <td>76,230</td>
+                        </tr>
+                        <tr>
+                            <td class="rank bronze">3</td>
+                            <td>💀 SeaReaper</td>
+                            <td>9</td>
+                            <td>265</td>
+                            <td>71,890</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>🌊 Tsunami</td>
+                            <td>8</td>
+                            <td>198</td>
+                            <td>54,320</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td>⚓ IronAnchor</td>
+                            <td>7</td>
+                            <td>176</td>
+                            <td>48,900</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="menu-buttons">
+                <button class="menu-btn secondary" onclick="showMainMenu()">
+                    <span class="btn-icon">◀</span>
+                    Back
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Menu -->
+    <div id="settings" class="menu-container">
+        <div class="ocean-background"></div>
+        <div class="menu-content">
+            <h2 class="menu-heading">Settings</h2>
+
+            <div class="settings-panel">
+                <div class="setting-row">
+                    <label for="musicVolume">Music Volume</label>
+                    <input type="range" id="musicVolume" min="0" max="100" value="70">
+                    <span id="musicValue">70%</span>
+                </div>
+
+                <div class="setting-row">
+                    <label for="sfxVolume">Sound Effects</label>
+                    <input type="range" id="sfxVolume" min="0" max="100" value="80">
+                    <span id="sfxValue">80%</span>
+                </div>
+
+                <div class="setting-row">
+                    <label for="graphicsQuality">Graphics Quality</label>
+                    <select id="graphicsQuality">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+
+                <div class="setting-row">
+                    <label>
+                        <input type="checkbox" id="showMinimap" checked>
+                        Show Minimap
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <label>
+                        <input type="checkbox" id="showPlayerNames" checked>
+                        Show Player Names
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <label>
+                        <input type="checkbox" id="enableChat" checked>
+                        Enable Chat
+                    </label>
+                </div>
+            </div>
+
+            <div class="menu-buttons">
+                <button class="menu-btn primary" onclick="saveSettings()">
+                    <span class="btn-icon">💾</span>
+                    Save Settings
+                </button>
+                <button class="menu-btn secondary" onclick="showMainMenu()">
+                    <span class="btn-icon">◀</span>
+                    Back
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Canvas (Hidden until game starts) -->
+    <div id="gameContainer" style="display: none;">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- In-Game HUD -->
+        <div id="gameHUD">
+            <div class="hud-top-left">
+                <div class="player-info">
+                    <div class="player-name" id="hudPlayerName">Captain</div>
+                    <div class="health-bar">
+                        <div class="health-fill" id="healthFill" style="width: 100%"></div>
+                    </div>
+                    <div class="xp-bar">
+                        <div class="xp-fill" id="xpFill" style="width: 45%"></div>
+                    </div>
+                    <div class="stats">
+                        <span>Level: <strong id="hudLevel">1</strong></span>
+                        <span>Gold: <strong id="hudGold">0</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hud-top-right">
+                <button class="hud-btn" onclick="showPauseMenu()">⚙️</button>
+            </div>
+        </div>
+
+        <!-- Pause Menu -->
+        <div id="pauseMenu" class="overlay-menu" style="display: none;">
+            <div class="overlay-content">
+                <h2>Paused</h2>
+                <button class="menu-btn" onclick="resumeGame()">Resume</button>
+                <button class="menu-btn" onclick="exitToMainMenu()">Exit to Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="menu.js"></script>
+</body>
+
+</html>
