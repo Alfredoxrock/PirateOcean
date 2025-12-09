@@ -3,7 +3,7 @@ import { clamp } from '../utils/math.js';
 import { CONFIG } from '../core/config.js';
 import { spriteManager } from '../systems/spriteManager.js';
 
-export function renderGame(ctx, camera, map, player, cannonballs, canvas) {
+export function renderGame(ctx, camera, map, player, cannonballs, canvas, selectedShip = null) {
     ctx.save();
     ctx.fillStyle = '#0a2b45';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -52,6 +52,19 @@ export function renderGame(ctx, camera, map, player, cannonballs, canvas) {
 
     // PvE ships
     for (const s of map.pveShips) {
+        // Draw selection indicator if this ship is selected
+        if (selectedShip === s) {
+            ctx.save();
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([8, 8]);
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size + 15, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
+        
         drawShip(ctx, s.x, s.y, s.dir, '#ff5252', s.size, s.level || 1);
         drawNameAndBar(ctx, s.x, s.y - s.size - 6, s.name || 'Enemy', s.level || 1, (s.hp / (s.maxHp || 50)) * 100);
     }

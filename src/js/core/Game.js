@@ -19,6 +19,7 @@ class Game {
         this.keys = {};
         this.running = false;
         this.lastTime = 0;
+        this.selectedShip = null;
     }
 
     setupInput() {
@@ -27,6 +28,25 @@ class Game {
         });
         window.addEventListener('keyup', (e) => {
             this.keys[e.key.toLowerCase()] = false;
+        });
+        
+        // Mouse click for ship selection
+        this.canvas.addEventListener('click', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left + this.camera.x;
+            const clickY = e.clientY - rect.top + this.camera.y;
+            
+            // Check if clicked on any enemy ship
+            let clickedShip = null;
+            for (const ship of this.map.pveShips) {
+                const dist = Math.hypot(clickX - ship.x, clickY - ship.y);
+                if (dist <= ship.size + 20) {
+                    clickedShip = ship;
+                    break;
+                }
+            }
+            
+            this.selectedShip = clickedShip;
         });
     }
 
@@ -57,7 +77,7 @@ class Game {
     }
 
     draw() {
-        renderGame(this.ctx, this.camera, this.map, this.player, this.cannonballs, this.canvas);
+        renderGame(this.ctx, this.camera, this.map, this.player, this.cannonballs, this.canvas, this.selectedShip);
     }
 
     frame(timestamp) {
