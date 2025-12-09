@@ -1,0 +1,21 @@
+{
+    "name": "pirate-ocean",
+    "version": "1.0.0",
+    "description": "A browser-based multiplayer pirate survival game",
+    "main": "index.html",
+    "scripts": {
+        "start": "npx http-server -p 8000 -c-1",
+        "dev": "npx http-server -p 8000 -c-1 -o"
+    },
+    "keywords": [
+        "game",
+        "pirate",
+        "multiplayer",
+        "browser-game"
+    ],
+    "author": "Alfredoxrock",
+    "license": "MIT",
+    "devDependencies": {
+        "http-server": "^14.1.1"
+    }
+}
