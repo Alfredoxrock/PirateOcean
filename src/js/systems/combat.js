@@ -36,6 +36,10 @@ export function updatePveShipAI(ship, player, dt, cannonballs) {
     ship.cannonCooldown = Math.max(0, ship.cannonCooldown - dt);
     ship.stateTimer = (ship.stateTimer || 0) - dt;
 
+    // Initialize aggression timer if not exists
+    if (typeof ship._aggressionTimer === 'undefined') ship._aggressionTimer = 0;
+    ship._aggressionTimer = Math.max(0, ship._aggressionTimer - dt);
+
     // Relative vector to player
     const dx = player.x - ship.x;
     const dy = player.y - ship.y;
@@ -45,11 +49,20 @@ export function updatePveShipAI(ship, player, dt, cannonballs) {
     // Desired engagement distance scales with level
     const desiredDist = clamp(220 + (6 - (ship.level || 1)) * 8, 140, 320);
 
+    // Check if player has attacked this ship recently
+    const wasHitRecently = ship._aggressionTimer > 0;
+
     // State selection
     if (dist < ship.aggroRange) {
-        ship.state = dist <= ship.attackRange ? 'attack' : 'chase';
+        if (wasHitRecently) {
+            // Player attacked, stay aggressive
+            ship.state = dist <= ship.attackRange ? 'attack' : 'chase';
+        } else {
+            // Player close but passive - hold position
+            ship.state = 'hold';
+        }
     } else {
-        if (!ship.state || ship.state === 'patrol') {
+        if (!ship.state || ship.state === 'patrol' || ship.state === 'hold') {
             if (ship.stateTimer <= 0) {
                 ship.state = 'patrol';
                 ship.stateTimer = rand(2, 6);
@@ -76,7 +89,12 @@ export function updatePveShipAI(ship, player, dt, cannonballs) {
     }
 
     // Behaviors
-    if (ship.state === 'patrol') {
+    if (ship.state === 'hold') {
+        // Hold position - just face player but don't move
+        ship.dir = angleToPlayer;
+        // No movement, just watching
+    }
+    else if (ship.state === 'patrol') {
         ship.dir += rand(-0.02, 0.02) * dt;
         ship.x += Math.cos(ship.dir) * ship.speed * dt * 40;
         ship.y += Math.sin(ship.dir) * ship.speed * dt * 40;
@@ -159,6 +177,12 @@ export function updateCannonballs(cannonballs, player, pveShips, dt) {
 
             if (hit) {
                 hit.hp = (hit.hp || hit.maxHp || 50) - (b.damage || 25);
+
+                // If player hit an NPC, make it aggressive
+                if (hit !== player && b.ownerId === 'player') {
+                    hit._aggressionTimer = 15; // Stay aggressive for 15 seconds after being hit
+                }
+
                 if (hit.hp <= 0) {
                     if (hit === player) {
                         player.x = CONFIG.MAP_WIDTH / 2;
