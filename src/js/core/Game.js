@@ -29,13 +29,13 @@ class Game {
         window.addEventListener('keyup', (e) => {
             this.keys[e.key.toLowerCase()] = false;
         });
-        
+
         // Mouse click for ship selection
         this.canvas.addEventListener('click', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             const clickX = e.clientX - rect.left + this.camera.x;
             const clickY = e.clientY - rect.top + this.camera.y;
-            
+
             // Check if clicked on any enemy ship
             let clickedShip = null;
             for (const ship of this.map.pveShips) {
@@ -45,7 +45,7 @@ class Game {
                     break;
                 }
             }
-            
+
             this.selectedShip = clickedShip;
         });
     }

@@ -64,7 +64,7 @@ export function renderGame(ctx, camera, map, player, cannonballs, canvas, select
             ctx.setLineDash([]);
             ctx.restore();
         }
-        
+
         drawShip(ctx, s.x, s.y, s.dir, '#ff5252', s.size, s.level || 1);
         drawNameAndBar(ctx, s.x, s.y - s.size - 6, s.name || 'Enemy', s.level || 1, (s.hp / (s.maxHp || 50)) * 100);
     }
