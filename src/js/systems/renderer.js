@@ -1,6 +1,7 @@
 // Rendering system
 import { clamp } from '../utils/math.js';
 import { CONFIG } from '../core/config.js';
+import { spriteManager } from './spriteManager.js';
 
 export function renderGame(ctx, camera, map, player, cannonballs, canvas) {
     ctx.save();
@@ -78,25 +79,41 @@ export function renderGame(ctx, camera, map, player, cannonballs, canvas) {
 
     ctx.restore();
 }
-
 function drawShip(ctx, x, y, angle, color, size) {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(angle);
-    ctx.beginPath();
-    ctx.moveTo(size, 0);
-    ctx.lineTo(-size * 0.6, size * 0.6);
-    ctx.lineTo(-size * 0.6, -size * 0.6);
-    ctx.closePath();
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = '#6d4c41';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-size * 0.2, -size * 0.2);
-    ctx.lineTo(-size * 0.2, size * 0.2);
-    ctx.stroke();
+
+    // Try to use sprite if available
+    const isPlayer = (color === '#ffd700');
+    const spriteName = isPlayer ? 'player_ship' : 'enemy_ship';
+    const sprite = spriteManager.getSprite(spriteName);
+
+    if (sprite && sprite.complete) {
+        // Draw sprite centered
+        const scale = (size * 2) / Math.max(sprite.width, sprite.height);
+        const w = sprite.width * scale;
+        const h = sprite.height * scale;
+        ctx.drawImage(sprite, -w / 2, -h / 2, w, h);
+    } else {
+        // Fallback: draw triangle ship
+        ctx.beginPath();
+        ctx.moveTo(size, 0);
+        ctx.lineTo(-size * 0.6, size * 0.6);
+        ctx.lineTo(-size * 0.6, -size * 0.6);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = '#6d4c41';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-size * 0.2, -size * 0.2);
+        ctx.lineTo(-size * 0.2, size * 0.2);
+        ctx.stroke();
+    }
+
     ctx.restore();
+} ctx.restore();
 }
 
 function drawNameAndBar(ctx, x, y, name, level, healthPct) {

@@ -6,6 +6,7 @@ import { generatePveShips, createPlayer } from './entities/Ship.js';
 import { updatePlayerMovement, handleIslandCollisions, updateCamera } from './systems/physics.js';
 import { updatePveShipAI, updateCannonballs } from './systems/combat.js';
 import { renderGame } from './systems/renderer.js';
+import { spriteManager } from './systems/spriteManager.js';
 
 class Game {
     constructor() {
@@ -70,7 +71,7 @@ class Game {
         requestAnimationFrame((t) => this.frame(t));
     }
 
-    start(opts = {}) {
+    async start(opts = {}) {
         if (this.running) return;
 
         this.canvas = document.getElementById('gameCanvas');
@@ -82,6 +83,11 @@ class Game {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
         this.ctx = this.canvas.getContext('2d');
+
+        // Load sprites (non-blocking, will use fallback if sprites fail)
+        spriteManager.loadAll().catch(err => {
+            console.warn('Continuing with fallback rendering');
+        });
 
         // Generate world
         this.map.islands = generateIslands();
