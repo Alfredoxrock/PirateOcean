@@ -2,6 +2,8 @@
 import { rand, clamp, normalizeAngle } from '../utils/math.js';
 import { CONFIG } from '../core/config.js';
 
+// ==================== WEAPON SYSTEM ====================
+
 export function spawnCannonball(owner, tx, ty, speed, cannonballs, player) {
     const ox = owner.x;
     const oy = owner.y;
@@ -31,120 +33,196 @@ export function spawnCannonball(owner, tx, ty, speed, cannonballs, player) {
     cannonballs.push(b);
 }
 
-export function updatePveShipAI(ship, player, dt, cannonballs) {
-    // Update timers
-    ship.cannonCooldown = Math.max(0, ship.cannonCooldown - dt);
-    ship.stateTimer = (ship.stateTimer || 0) - dt;
+// ==================== AI CONFIGURATION ====================
 
-    // Initialize aggression timer if not exists
-    if (typeof ship._aggressionTimer === 'undefined') ship._aggressionTimer = 0;
-    ship._aggressionTimer = Math.max(0, ship._aggressionTimer - dt);
+const AI_CONFIG = {
+    AGGRESSION_DURATION: 15,        // Seconds to stay aggressive after being hit
+    PATROL_DURATION_MIN: 3,         // Min patrol state duration
+    PATROL_DURATION_MAX: 8,         // Max patrol state duration
+    EVASION_RANGE: 110,             // Distance to start evading cannonballs
+    EVASION_MULTIPLIER: 90,         // Speed multiplier when evading
+    SEPARATION_DISTANCE: 40,        // Min distance to keep from player
+    BROADSIDE_ANGLE_MIN: 0.25,      // Min angle for broadside firing
+    BROADSIDE_ANGLE_MAX: 1.6,       // Max angle for broadside firing
+};
 
-    // Relative vector to player
-    const dx = player.x - ship.x;
-    const dy = player.y - ship.y;
-    const dist = Math.hypot(dx, dy);
-    const angleToPlayer = Math.atan2(dy, dx);
+// ==================== AI BEHAVIORS ====================
 
-    // Desired engagement distance scales with level
-    const desiredDist = clamp(220 + (6 - (ship.level || 1)) * 8, 140, 320);
-
-    // Check if player has attacked this ship recently
-    const wasHitRecently = ship._aggressionTimer > 0;
-
-    // State selection
-    if (dist < ship.aggroRange) {
-        if (wasHitRecently) {
-            // Player attacked, stay aggressive
-            ship.state = dist <= ship.attackRange ? 'attack' : 'chase';
-        } else {
-            // Player close but passive - hold position
-            ship.state = 'hold';
-        }
-    } else {
-        if (!ship.state || ship.state === 'patrol' || ship.state === 'hold') {
-            if (ship.stateTimer <= 0) {
-                ship.state = 'patrol';
-                ship.stateTimer = rand(2, 6);
-            }
-        } else {
-            ship.state = 'patrol';
-            ship.stateTimer = rand(2, 6);
-        }
-    }
-
-    // Dodge incoming cannonballs (simple heuristic)
-    for (const b of cannonballs) {
-        if (b.ownerId === ship.id) continue;
-        const db = Math.hypot(b.x - ship.x, b.y - ship.y);
-        if (db < 110 && b.z > 0) {
-            const evadeAng = Math.atan2(b.vy, b.vx) + Math.PI / 2;
-            ship.x += Math.cos(evadeAng) * ship.speed * dt * 90;
-            ship.y += Math.sin(evadeAng) * ship.speed * dt * 90;
-            ship.cannonCooldown = Math.max(ship.cannonCooldown, 0.25);
-            ship.x = clamp(ship.x, 0, CONFIG.MAP_WIDTH);
-            ship.y = clamp(ship.y, 0, CONFIG.MAP_HEIGHT);
-            return;
-        }
-    }
-
-    // Behaviors
-    if (ship.state === 'hold') {
-        // Hold position - just face player but don't move
-        ship.dir = angleToPlayer;
-        // No movement, just watching
-    }
-    else if (ship.state === 'patrol') {
+const AIBehaviors = {
+    patrol: (ship, context) => {
+        const { dt } = context;
+        // Random wandering behavior
         ship.dir += rand(-0.02, 0.02) * dt;
         ship.x += Math.cos(ship.dir) * ship.speed * dt * 40;
         ship.y += Math.sin(ship.dir) * ship.speed * dt * 40;
-    }
-    else if (ship.state === 'chase') {
-        // Move to flanking/broadside position around player
-        if (typeof ship._flankSide === 'undefined') ship._flankSide = Math.random() < 0.5 ? 1 : -1;
+    },
+
+    chase: (ship, context) => {
+        const { player, angleToPlayer, desiredDist, dt } = context;
+        // Initialize flank side if needed
+        if (typeof ship._flankSide === 'undefined') {
+            ship._flankSide = Math.random() < 0.5 ? 1 : -1;
+        }
+
+        // Move to flanking position around player
         const flankAngle = angleToPlayer + (Math.PI / 2) * ship._flankSide;
         const tx = player.x + Math.cos(flankAngle) * desiredDist;
         const ty = player.y + Math.sin(flankAngle) * desiredDist;
         const angToTarget = Math.atan2(ty - ship.y, tx - ship.x);
+
         ship.dir = angToTarget;
         ship.x += Math.cos(ship.dir) * ship.speed * dt * 80;
         ship.y += Math.sin(ship.dir) * ship.speed * dt * 80;
-    }
-    else if (ship.state === 'attack') {
+    },
+
+    attack: (ship, context) => {
+        const { player, angleToPlayer, desiredDist, dist, dt, cannonballs } = context;
+
+        // Initialize circle phase if needed
+        if (typeof ship._circlePhase === 'undefined') {
+            ship._circlePhase = Math.random() * Math.PI * 2;
+        }
+
         // Circle around player to present broadside
-        if (typeof ship._circlePhase === 'undefined') ship._circlePhase = Math.random() * Math.PI * 2;
         ship._circlePhase += (0.5 + (ship.level || 1) * 0.05) * dt;
         const circX = player.x + Math.cos(ship._circlePhase) * desiredDist;
         const circY = player.y + Math.sin(ship._circlePhase) * desiredDist;
         const angToCirc = Math.atan2(circY - ship.y, circX - ship.x);
+
         ship.dir = angToCirc;
         ship.x += Math.cos(ship.dir) * ship.speed * dt * 60;
         ship.y += Math.sin(ship.dir) * ship.speed * dt * 60;
 
-        // If too close, back off
+        // Back off if too close
         if (dist < desiredDist - 20) {
             ship.x -= Math.cos(angleToPlayer) * ship.speed * dt * 30;
             ship.y -= Math.sin(angleToPlayer) * ship.speed * dt * 30;
         }
 
-        // Fire when roughly perpendicular to player (broadside)
-        const angDiff = Math.abs(((ship.dir - angleToPlayer) + Math.PI) % (Math.PI * 2) - Math.PI);
-        if (ship.cannonCooldown <= 0 && angDiff > 0.25 && angDiff < 1.6) {
-            spawnCannonball(ship, player.x, player.y, 320 + (ship.level || 1) * 26, cannonballs, player);
-            ship.cannonCooldown = 1.4 - Math.min(0.9, (ship.level || 1) * 0.04);
+        // Fire broadside when perpendicular to player
+        tryFireBroadside(ship, context);
+    },
+};
+
+// ==================== AI HELPER FUNCTIONS ====================
+
+function initializeAIState(ship) {
+    if (typeof ship._aggressionTimer === 'undefined') {
+        ship._aggressionTimer = 0;
+    }
+}
+
+function updateTimers(ship, dt) {
+    ship.cannonCooldown = Math.max(0, ship.cannonCooldown - dt);
+    ship.stateTimer = (ship.stateTimer || 0) - dt;
+    ship._aggressionTimer = Math.max(0, ship._aggressionTimer - dt);
+}
+
+function selectAIState(ship, context) {
+    const { dist, wasHitRecently } = context;
+
+    // Aggressive state if recently attacked
+    if (wasHitRecently && dist < ship.aggroRange) {
+        return dist <= ship.attackRange ? 'attack' : 'chase';
+    }
+
+    // Neutral patrol state by default
+    if (!ship.state || ship.state === 'patrol' || ship.stateTimer <= 0) {
+        ship.stateTimer = rand(AI_CONFIG.PATROL_DURATION_MIN, AI_CONFIG.PATROL_DURATION_MAX);
+        return 'patrol';
+    }
+
+    return ship.state;
+}
+
+function tryEvadeCannonballs(ship, cannonballs, dt) {
+    for (const b of cannonballs) {
+        if (b.ownerId === ship.id) continue;
+
+        const db = Math.hypot(b.x - ship.x, b.y - ship.y);
+        if (db < AI_CONFIG.EVASION_RANGE && b.z > 0) {
+            const evadeAng = Math.atan2(b.vy, b.vx) + Math.PI / 2;
+            ship.x += Math.cos(evadeAng) * ship.speed * dt * AI_CONFIG.EVASION_MULTIPLIER;
+            ship.y += Math.sin(evadeAng) * ship.speed * dt * AI_CONFIG.EVASION_MULTIPLIER;
+            ship.cannonCooldown = Math.max(ship.cannonCooldown, 0.25);
+            ship.x = clamp(ship.x, 0, CONFIG.MAP_WIDTH);
+            ship.y = clamp(ship.y, 0, CONFIG.MAP_HEIGHT);
+            return true;
         }
     }
+    return false;
+}
 
-    // Separation from player to avoid stacking
-    const keepaway = 40 + (ship.size || 24);
-    if (dist < keepaway) {
-        ship.x -= (dx / (dist || 1)) * (keepaway - dist) * 0.6;
-        ship.y -= (dy / (dist || 1)) * (keepaway - dist) * 0.6;
+function tryFireBroadside(ship, context) {
+    const { player, angleToPlayer, cannonballs } = context;
+
+    // Check if perpendicular enough for broadside
+    const angDiff = Math.abs(((ship.dir - angleToPlayer) + Math.PI) % (Math.PI * 2) - Math.PI);
+    const canFire = ship.cannonCooldown <= 0 &&
+        angDiff > AI_CONFIG.BROADSIDE_ANGLE_MIN &&
+        angDiff < AI_CONFIG.BROADSIDE_ANGLE_MAX;
+
+    if (canFire) {
+        const projectileSpeed = 320 + (ship.level || 1) * 26;
+        spawnCannonball(ship, player.x, player.y, projectileSpeed, cannonballs, player);
+        ship.cannonCooldown = 1.4 - Math.min(0.9, (ship.level || 1) * 0.04);
     }
+}
 
+function applySeparation(ship, context) {
+    const { player, dist, dx, dy } = context;
+    const keepaway = AI_CONFIG.SEPARATION_DISTANCE + (ship.size || 24);
+
+    if (dist < keepaway && dist > 0) {
+        ship.x -= (dx / dist) * (keepaway - dist) * 0.6;
+        ship.y -= (dy / dist) * (keepaway - dist) * 0.6;
+    }
+}
+
+function constrainToMap(ship) {
     ship.x = clamp(ship.x, 0, CONFIG.MAP_WIDTH);
     ship.y = clamp(ship.y, 0, CONFIG.MAP_HEIGHT);
 }
+
+// ==================== MAIN AI UPDATE ====================
+
+export function updatePveShipAI(ship, player, dt, cannonballs) {
+    // Initialize AI state
+    initializeAIState(ship);
+    updateTimers(ship, dt);
+
+    // Calculate relative position to player
+    const dx = player.x - ship.x;
+    const dy = player.y - ship.y;
+    const dist = Math.hypot(dx, dy);
+    const angleToPlayer = Math.atan2(dy, dx);
+    const desiredDist = clamp(220 + (6 - (ship.level || 1)) * 8, 140, 320);
+    const wasHitRecently = ship._aggressionTimer > 0;
+
+    // Build context object for behaviors
+    const context = {
+        ship, player, dt, cannonballs,
+        dx, dy, dist, angleToPlayer, desiredDist, wasHitRecently
+    };
+
+    // Try to evade incoming projectiles (highest priority)
+    if (tryEvadeCannonballs(ship, cannonballs, dt)) {
+        return;
+    }
+
+    // Select and execute AI state
+    ship.state = selectAIState(ship, context);
+    const behavior = AIBehaviors[ship.state];
+    if (behavior) {
+        behavior(ship, context);
+    }
+
+    // Apply separation and boundary constraints
+    applySeparation(ship, context);
+    constrainToMap(ship);
+}
+
+// ==================== PROJECTILE SYSTEM ====================
 
 export function updateCannonballs(cannonballs, player, pveShips, dt) {
     for (let i = cannonballs.length - 1; i >= 0; i--) {

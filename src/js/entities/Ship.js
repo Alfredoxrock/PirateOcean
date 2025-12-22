@@ -12,7 +12,7 @@ export function generatePveShips() {
             name: PIRATE_NAMES[i % PIRATE_NAMES.length],
             x: rand(100, CONFIG.MAP_WIDTH - 100),
             y: rand(100, CONFIG.MAP_HEIGHT - 100),
-            speed: rand(20, 60) / 100,
+            speed: rand(5, 15) / 100,
             dir: rand(0, Math.PI * 2),
             hp: maxHp,
             maxHp: maxHp,
