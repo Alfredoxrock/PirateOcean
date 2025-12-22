@@ -3,51 +3,44 @@ import { clamp } from '../utils/math.js';
 import { CONFIG } from '../core/config.js';
 
 export function updatePlayerMovement(player, keys, dt) {
-    // Lower level = faster ship (level 1 is fastest)
-    const speedMultiplier = Math.max(1, 2 - (player.level * 0.08));
-    const speed = CONFIG.PLAYER_ACCELERATION * speedMultiplier * 200;
+    // Move ship towards target position if set
+    if (player.targetX !== undefined && player.targetY !== undefined) {
+        const dx = player.targetX - player.x;
+        const dy = player.targetY - player.y;
+        const dist = Math.hypot(dx, dy);
 
-    let moveX = 0;
-    let moveY = 0;
+        if (dist > 5) {
+            // Calculate ship speed based on level
+            const speedMultiplier = Math.max(1, 2 - (player.level * 0.08));
+            const speed = CONFIG.PLAYER_ACCELERATION * speedMultiplier * 200;
 
-    // Direct WASD movement
-    if (keys['w'] || keys['arrowup']) {
-        moveY = -1;
-    }
-    if (keys['s'] || keys['arrowdown']) {
-        moveY = 1;
-    }
-    if (keys['a'] || keys['arrowleft']) {
-        moveX = -1;
-    }
-    if (keys['d'] || keys['arrowright']) {
-        moveX = 1;
-    }
+            // Normalize direction
+            const nx = dx / dist;
+            const ny = dy / dist;
 
-    // Normalize diagonal movement
-    if (moveX !== 0 && moveY !== 0) {
-        const len = Math.sqrt(moveX * moveX + moveY * moveY);
-        moveX /= len;
-        moveY /= len;
-    }
+            // Set velocity towards target
+            player.vx = nx * speed * dt;
+            player.vy = ny * speed * dt;
+            player.a = Math.atan2(dy, dx);
 
-    // Apply movement
-    if (moveX !== 0 || moveY !== 0) {
-        player.vx = moveX * speed * dt;
-        player.vy = moveY * speed * dt;
-        player.a = Math.atan2(moveY, moveX);
+            // Apply velocity
+            player.x += player.vx * dt;
+            player.y += player.vy * dt;
+        } else {
+            // Reached target
+            player.targetX = undefined;
+            player.targetY = undefined;
+            player.vx = 0;
+            player.vy = 0;
+        }
     } else {
+        // Gradually slow down if no target
         player.vx *= 0.85;
         player.vy *= 0.85;
+
+        if (Math.abs(player.vx) < 0.01) player.vx = 0;
+        if (Math.abs(player.vy) < 0.01) player.vy = 0;
     }
-
-    // Apply velocity
-    player.x += player.vx * dt;
-    player.y += player.vy * dt;
-
-    // No damping since we're using direct movement
-    // player.vx *= CONFIG.PLAYER_DAMPING;
-    // player.vy *= CONFIG.PLAYER_DAMPING;
 
     // Clamp to map
     player.x = clamp(player.x, 0, CONFIG.MAP_WIDTH);
@@ -78,7 +71,24 @@ export function handleIslandCollisions(player, islands) {
     }
 }
 
-export function updateCamera(camera, player, canvasWidth, canvasHeight) {
-    camera.x = clamp(player.x - canvasWidth / 2, 0, CONFIG.MAP_WIDTH - canvasWidth);
-    camera.y = clamp(player.y - canvasHeight / 2, 0, CONFIG.MAP_HEIGHT - canvasHeight);
+export function updateCamera(camera, player, canvasWidth, canvasHeight, keys, dt) {
+    // Camera movement with WASD keys
+    const cameraSpeed = 400;
+
+    if (keys['w'] || keys['arrowup']) {
+        camera.y -= cameraSpeed * dt;
+    }
+    if (keys['s'] || keys['arrowdown']) {
+        camera.y += cameraSpeed * dt;
+    }
+    if (keys['a'] || keys['arrowleft']) {
+        camera.x -= cameraSpeed * dt;
+    }
+    if (keys['d'] || keys['arrowright']) {
+        camera.x += cameraSpeed * dt;
+    }
+
+    // Clamp camera to map bounds
+    camera.x = clamp(camera.x, 0, CONFIG.MAP_WIDTH - canvasWidth);
+    camera.y = clamp(camera.y, 0, CONFIG.MAP_HEIGHT - canvasHeight);
 }

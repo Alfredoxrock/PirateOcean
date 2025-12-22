@@ -30,23 +30,15 @@ class Game {
             this.keys[e.key.toLowerCase()] = false;
         });
 
-        // Mouse click for ship selection
+        // Click to move ship
         this.canvas.addEventListener('click', (e) => {
             const rect = this.canvas.getBoundingClientRect();
-            const clickX = e.clientX - rect.left + this.camera.x;
-            const clickY = e.clientY - rect.top + this.camera.y;
+            const worldX = e.clientX - rect.left + this.camera.x;
+            const worldY = e.clientY - rect.top + this.camera.y;
 
-            // Check if clicked on any enemy ship
-            let clickedShip = null;
-            for (const ship of this.map.pveShips) {
-                const dist = Math.hypot(clickX - ship.x, clickY - ship.y);
-                if (dist <= ship.size + 20) {
-                    clickedShip = ship;
-                    break;
-                }
-            }
-
-            this.selectedShip = clickedShip;
+            // Set target position for ship
+            this.player.targetX = worldX;
+            this.player.targetY = worldY;
         });
     }
 
@@ -66,7 +58,7 @@ class Game {
         updateCannonballs(this.cannonballs, this.player, this.map.pveShips, dt);
 
         // Update camera
-        updateCamera(this.camera, this.player, this.canvas.width, this.canvas.height);
+        updateCamera(this.camera, this.player, this.canvas.width, this.canvas.height, this.keys, dt);
 
         // Update HUD
         if (window.gameMenu && window.gameMenu.updateHUD) {
@@ -127,14 +119,14 @@ class Game {
         this.lastTime = performance.now();
         requestAnimationFrame((t) => this.frame(t));
 
-        // Update camera once
-        updateCamera(this.camera, this.player, this.canvas.width, this.canvas.height);
+        // Update camera
+        updateCamera(this.camera, this.player, this.canvas.width, this.canvas.height, this.keys, dt);
 
         // Resize handling
         window.addEventListener('resize', () => {
             this.canvas.width = window.innerWidth;
             this.canvas.height = window.innerHeight;
-            updateCamera(this.camera, this.player, this.canvas.width, this.canvas.height);
+            updateCamera(this.camera, this.player, this.canvas.width, this.canvas.height, this.keys, 0);
         });
     }
 }

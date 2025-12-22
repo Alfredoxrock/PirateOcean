@@ -10,6 +10,17 @@ export function renderGame(ctx, camera, map, player, cannonballs, canvas, select
 
     ctx.translate(-camera.x, -camera.y);
 
+    // Draw target indicator if player has a target
+    if (player.targetX !== undefined && player.targetY !== undefined) {
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 4]);
+        ctx.beginPath();
+        ctx.arc(player.targetX, player.targetY, 20, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
     // Ocean grid
     const tile = 200;
     ctx.fillStyle = 'rgba(10,25,50,0.25)';
