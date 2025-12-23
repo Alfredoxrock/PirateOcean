@@ -224,7 +224,7 @@ export function updatePveShipAI(ship, player, dt, cannonballs) {
 
 // ==================== PROJECTILE SYSTEM ====================
 
-export function updateCannonballs(cannonballs, player, pveShips, dt) {
+export function updateCannonballs(cannonballs, player, pveShips, dt, loot = []) {
     for (let i = cannonballs.length - 1; i >= 0; i--) {
         const b = cannonballs[i];
         b.x += b.vx * dt * 60;
@@ -267,6 +267,26 @@ export function updateCannonballs(cannonballs, player, pveShips, dt) {
                         player.y = CONFIG.MAP_HEIGHT / 2;
                         player.hp = player.maxHp;
                     } else {
+                        // Spawn loot when NPC dies
+                        const lootValue = rand(10, 30) + hit.level * 5;
+                        const lootType = Math.random() < 0.7 ? 'gold' : 'jewelry';
+                        loot.push({
+                            x: hit.x,
+                            y: hit.y,
+                            type: lootType,
+                            value: lootValue
+                        });
+
+                        // Also drop some cannonballs
+                        if (Math.random() < 0.5) {
+                            loot.push({
+                                x: hit.x + rand(-20, 20),
+                                y: hit.y + rand(-20, 20),
+                                type: 'cannonballs',
+                                value: rand(5, 15)
+                            });
+                        }
+
                         hit.x = rand(100, CONFIG.MAP_WIDTH - 100);
                         hit.y = rand(100, CONFIG.MAP_HEIGHT - 100);
                         hit.hp = hit.maxHp;

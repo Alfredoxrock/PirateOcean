@@ -1,10 +1,10 @@
 // Main game orchestrator
 import { CONFIG } from './config.js';
 import { clamp } from '../utils/math.js';
-import { generateIslands, generateCreatures } from '../systems/mapGenerator.js';
+import { generateIslands, generateCreatures, generateTreasures } from '../systems/mapGenerator.js';
 import { generatePveShips, createPlayer } from '../entities/Ship.js';
 import { updatePlayerMovement, handleIslandCollisions, updateCamera } from '../systems/physics.js';
-import { updatePveShipAI, updateCannonballs } from '../systems/combat.js';
+import { updatePveShipAI, updateCannonballs, spawnCannonball } from '../systems/combat.js';
 import { renderGame } from '../systems/renderer.js';
 import { spriteManager } from '../systems/spriteManager.js';
 
@@ -13,8 +13,9 @@ class Game {
         this.canvas = null;
         this.ctx = null;
         this.camera = { x: 0, y: 0 };
-        this.map = { islands: [], creatures: [], pveShips: [] };
+        this.map = { islands: [], creatures: [], pveShips: [], treasures: [] };
         this.cannonballs = [];
+        this.loot = [];
         this.player = null;
         this.keys = {};
         this.running = false;
@@ -25,12 +26,18 @@ class Game {
     setupInput() {
         window.addEventListener('keydown', (e) => {
             this.keys[e.key.toLowerCase()] = true;
+
+            // Spacebar to shoot
+            if (e.key === ' ') {
+                e.preventDefault();
+                this.fireAtCursor();
+            }
         });
         window.addEventListener('keyup', (e) => {
             this.keys[e.key.toLowerCase()] = false;
         });
 
-        // Click to move ship
+        // Left click to move ship
         this.canvas.addEventListener('click', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             const worldX = e.clientX - rect.left + this.camera.x;
@@ -40,10 +47,48 @@ class Game {
             this.player.targetX = worldX;
             this.player.targetY = worldY;
         });
+
+        // Right click to shoot
+        this.canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const rect = this.canvas.getBoundingClientRect();
+            this.mouseX = e.clientX - rect.left + this.camera.x;
+            this.mouseY = e.clientY - rect.top + this.camera.y;
+            this.fireAtCursor();
+        });
+
+        // Track mouse position for spacebar shooting
+        this.canvas.addEventListener('mousemove', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            this.mouseX = e.clientX - rect.left + this.camera.x;
+            this.mouseY = e.clientY - rect.top + this.camera.y;
+        });
+    }
+
+    fireAtCursor() {
+        if (!this.player || !this.mouseX || !this.mouseY) return;
+
+        // Check cooldown and ammo
+        if (this.player.cannonCooldown > 0) return;
+        if (this.player.cannonballs <= 0) return;
+
+        // Fire cannonball toward mouse position
+        spawnCannonball(this.player, this.mouseX, this.mouseY, 300, this.cannonballs, this.player);
+
+        // Consume ammo
+        this.player.cannonballs--;
+
+        // Set cooldown (0.5 seconds)
+        this.player.cannonCooldown = 0.5;
     }
 
     update(dt) {
         if (!this.player) return;
+
+        // Update player cooldowns
+        if (this.player.cannonCooldown > 0) {
+            this.player.cannonCooldown -= dt;
+        }
 
         // Update player
         updatePlayerMovement(this.player, this.keys, dt);
@@ -55,7 +100,33 @@ class Game {
         }
 
         // Update projectiles
-        updateCannonballs(this.cannonballs, this.player, this.map.pveShips, dt);
+        updateCannonballs(this.cannonballs, this.player, this.map.pveShips, dt, this.loot);
+
+        // Collect loot
+        for (let i = this.loot.length - 1; i >= 0; i--) {
+            const item = this.loot[i];
+            const dist = Math.hypot(this.player.x - item.x, this.player.y - item.y);
+            if (dist < 40) {
+                if (item.type === 'gold') {
+                    this.player.gold += item.value;
+                } else if (item.type === 'jewelry') {
+                    this.player.jewelry += item.value;
+                } else if (item.type === 'cannonballs') {
+                    this.player.cannonballs += item.value;
+                }
+                this.loot.splice(i, 1);
+            }
+        }
+
+        // Collect treasures
+        for (let i = this.map.treasures.length - 1; i >= 0; i--) {
+            const treasure = this.map.treasures[i];
+            const dist = Math.hypot(this.player.x - treasure.x, this.player.y - treasure.y);
+            if (dist < 40) {
+                this.player.gold += treasure.value;
+                this.map.treasures.splice(i, 1);
+            }
+        }
 
         // Update camera
         updateCamera(this.camera, this.player, this.canvas.width, this.canvas.height, this.keys, dt);
@@ -72,7 +143,7 @@ class Game {
     }
 
     draw() {
-        renderGame(this.ctx, this.camera, this.map, this.player, this.cannonballs, this.canvas, this.selectedShip);
+        renderGame(this.ctx, this.camera, this.map, this.player, this.cannonballs, this.canvas, this.selectedShip, this.loot);
     }
 
     frame(timestamp) {
@@ -108,6 +179,7 @@ class Game {
         this.map.islands = generateIslands();
         this.map.creatures = generateCreatures();
         this.map.pveShips = generatePveShips();
+        this.map.treasures = generateTreasures(this.map.islands);
 
         // Create player
         this.player = createPlayer(opts);

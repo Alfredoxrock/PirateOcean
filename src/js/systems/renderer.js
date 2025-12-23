@@ -3,7 +3,7 @@ import { clamp } from '../utils/math.js';
 import { CONFIG } from '../core/config.js';
 import { spriteManager } from '../systems/spriteManager.js';
 
-export function renderGame(ctx, camera, map, player, cannonballs, canvas, selectedShip = null) {
+export function renderGame(ctx, camera, map, player, cannonballs, canvas, selectedShip = null, loot = []) {
     ctx.save();
     ctx.fillStyle = '#0a2b45';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -61,7 +61,43 @@ export function renderGame(ctx, camera, map, player, cannonballs, canvas, select
         ctx.fill();
     }
 
-    // PvE ships
+    // Treasures
+    for (const treasure of map.treasures) {
+        // Glow effect
+        const gradient = ctx.createRadialGradient(treasure.x, treasure.y, 0, treasure.x, treasure.y, 30);
+        gradient.addColorStop(0, 'rgba(255, 215, 0, 0.6)');
+        gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(treasure.x, treasure.y, 30, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Treasure chest
+        ctx.save();
+        ctx.translate(treasure.x, treasure.y);
+        
+        // Chest base
+        ctx.fillStyle = '#8B4513';
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 2;
+        ctx.fillRect(-12, -8, 24, 16);
+        ctx.strokeRect(-12, -8, 24, 16);
+        
+        // Chest lid
+        ctx.fillStyle = '#A0522D';
+        ctx.fillRect(-12, -12, 24, 4);
+        ctx.strokeRect(-12, -12, 24, 4);
+        
+        // Lock
+        ctx.fillStyle = '#FFD700';
+        ctx.beginPath();
+        ctx.arc(0, 0, 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+
+    // PvE ships (drawing after treasures so they appear on top)
     for (const s of map.pveShips) {
         // Draw selection indicator if this ship is selected
         if (selectedShip === s) {
@@ -83,6 +119,73 @@ export function renderGame(ctx, camera, map, player, cannonballs, canvas, select
     // Player
     drawShip(ctx, player.x, player.y, player.a, '#ffd700', 64, player.level || 1);
     drawNameAndBar(ctx, player.x, player.y - 70, player.name || 'Captain', player.level || 1, (player.hp / player.maxHp) * 100);
+
+    // Loot items
+    for (const item of loot) {
+        ctx.save();
+        ctx.translate(item.x, item.y);
+
+        // Draw glow effect
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 20);
+        if (item.type === 'gold') {
+            gradient.addColorStop(0, 'rgba(255, 215, 0, 0.5)');
+            gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, 20, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Gold coin
+            ctx.fillStyle = '#FFD700';
+            ctx.strokeStyle = '#FFA500';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        } else if (item.type === 'jewelry') {
+            gradient.addColorStop(0, 'rgba(138, 43, 226, 0.5)');
+            gradient.addColorStop(1, 'rgba(138, 43, 226, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, 20, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Jewelry gem
+            ctx.fillStyle = '#8A2BE2';
+            ctx.strokeStyle = '#4B0082';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, -8);
+            ctx.lineTo(6, 0);
+            ctx.lineTo(0, 8);
+            ctx.lineTo(-6, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        } else if (item.type === 'cannonballs') {
+            gradient.addColorStop(0, 'rgba(128, 128, 128, 0.5)');
+            gradient.addColorStop(1, 'rgba(128, 128, 128, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, 20, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Cannonball pile
+            ctx.fillStyle = '#555';
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 3; i++) {
+                const offsetX = (i - 1) * 5;
+                ctx.beginPath();
+                ctx.arc(offsetX, 0, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+
+        ctx.restore();
+    }
 
     // Cannonballs
     for (const b of cannonballs) {

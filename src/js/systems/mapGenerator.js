@@ -49,3 +49,42 @@ export function generateCreatures() {
     }
     return creatures;
 }
+
+export function generateTreasures(islands) {
+    const treasures = [];
+    const numTreasures = 25;
+
+    for (let i = 0; i < numTreasures; i++) {
+        let attempts = 0;
+        let validPosition = false;
+        let x, y;
+
+        while (!validPosition && attempts < 100) {
+            attempts++;
+            x = rand(100, CONFIG.MAP_WIDTH - 100);
+            y = rand(100, CONFIG.MAP_HEIGHT - 100);
+
+            // Check distance from islands
+            validPosition = true;
+            for (const island of islands) {
+                const dist = Math.hypot(x - island.x, y - island.y);
+                if (dist < island.r + 50) {
+                    validPosition = false;
+                    break;
+                }
+            }
+        }
+
+        if (validPosition) {
+            const value = Math.round(rand(50, 200));
+            treasures.push({
+                x: x,
+                y: y,
+                type: 'treasure',
+                value: value
+            });
+        }
+    }
+
+    return treasures;
+}
