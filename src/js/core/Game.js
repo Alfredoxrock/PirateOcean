@@ -5,7 +5,7 @@ import { generateIslands, generateCreatures, generateTreasures } from '../system
 import { generatePveShips, createPlayer } from '../entities/Ship.js';
 import { updatePlayerMovement, handleIslandCollisions, updateCamera } from '../systems/physics.js';
 import { updatePveShipAI, updateCannonballs, spawnCannonball } from '../systems/combat.js';
-import { renderGame } from '../systems/renderer.js';
+import { renderGame, renderMinimap } from '../systems/renderer.js';
 import { spriteManager } from '../systems/spriteManager.js';
 
 class Game {
@@ -16,9 +16,11 @@ class Game {
         this.map = { islands: [], creatures: [], pveShips: [], treasures: [] };
         this.cannonballs = [];
         this.loot = [];
+        this.effects = [];
         this.player = null;
         this.keys = {};
         this.running = false;
+        this.paused = false;
         this.lastTime = 0;
         this.selectedShip = null;
     }
@@ -26,6 +28,12 @@ class Game {
     setupInput() {
         window.addEventListener('keydown', (e) => {
             this.keys[e.key.toLowerCase()] = true;
+
+            // ESC to pause
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                this.togglePause();
+            }
 
             // Spacebar to shoot
             if (e.key === ' ') {
@@ -65,6 +73,14 @@ class Game {
         });
     }
 
+    togglePause() {
+        this.paused = !this.paused;
+        const pauseMenu = document.getElementById('pauseMenu');
+        if (pauseMenu) {
+            pauseMenu.style.display = this.paused ? 'flex' : 'none';
+        }
+    }
+
     fireAtCursor() {
         if (!this.player || !this.mouseX || !this.mouseY) return;
 
@@ -83,11 +99,16 @@ class Game {
     }
 
     update(dt) {
-        if (!this.player) return;
+        if (!this.player || this.paused) return;
 
         // Update player cooldowns
         if (this.player.cannonCooldown > 0) {
             this.player.cannonCooldown -= dt;
+        }
+
+        // Health regeneration (1 HP per second when not at full health)
+        if (this.player.hp < this.player.maxHp) {
+            this.player.hp = Math.min(this.player.maxHp, this.player.hp + dt);
         }
 
         // Update player
@@ -100,7 +121,7 @@ class Game {
         }
 
         // Update projectiles
-        updateCannonballs(this.cannonballs, this.player, this.map.pveShips, dt, this.loot);
+        updateCannonballs(this.cannonballs, this.player, this.map.pveShips, dt, this.loot, this.effects);
 
         // Collect loot
         for (let i = this.loot.length - 1; i >= 0; i--) {
@@ -128,6 +149,18 @@ class Game {
             }
         }
 
+        // Update effects
+        for (let i = this.effects.length - 1; i >= 0; i--) {
+            const effect = this.effects[i];
+            effect.life -= dt;
+            if (effect.life <= 0) {
+                this.effects.splice(i, 1);
+            } else if (effect.type === 'explosion') {
+                effect.radius += dt * 100;
+                effect.alpha -= dt * 1.5;
+            }
+        }
+
         // Update camera
         updateCamera(this.camera, this.player, this.canvas.width, this.canvas.height, this.keys, dt);
 
@@ -143,7 +176,8 @@ class Game {
     }
 
     draw() {
-        renderGame(this.ctx, this.camera, this.map, this.player, this.cannonballs, this.canvas, this.selectedShip, this.loot);
+        renderGame(this.ctx, this.camera, this.map, this.player, this.cannonballs, this.canvas, this.selectedShip, this.loot, this.effects);
+        renderMinimap(this.map, this.player, this.camera, this.canvas.width, this.canvas.height);
     }
 
     frame(timestamp) {

@@ -224,7 +224,7 @@ export function updatePveShipAI(ship, player, dt, cannonballs) {
 
 // ==================== PROJECTILE SYSTEM ====================
 
-export function updateCannonballs(cannonballs, player, pveShips, dt, loot = []) {
+export function updateCannonballs(cannonballs, player, pveShips, dt, loot = [], effects = []) {
     for (let i = cannonballs.length - 1; i >= 0; i--) {
         const b = cannonballs[i];
         b.x += b.vx * dt * 60;
@@ -256,17 +256,50 @@ export function updateCannonballs(cannonballs, player, pveShips, dt, loot = []) 
             if (hit) {
                 hit.hp = (hit.hp || hit.maxHp || 50) - (b.damage || 25);
 
+                // Hit effect
+                effects.push({
+                    type: 'hit',
+                    x: hit.x,
+                    y: hit.y,
+                    life: 0.3,
+                    radius: 20,
+                    alpha: 1
+                });
+
                 // If player hit an NPC, make it aggressive
                 if (hit !== player && b.ownerId === 'player') {
                     hit._aggressionTimer = 15; // Stay aggressive for 15 seconds after being hit
                 }
 
                 if (hit.hp <= 0) {
+                    // Explosion effect
+                    effects.push({
+                        type: 'explosion',
+                        x: hit.x,
+                        y: hit.y,
+                        life: 1.0,
+                        radius: 30,
+                        alpha: 1
+                    });
+
                     if (hit === player) {
                         player.x = CONFIG.MAP_WIDTH / 2;
                         player.y = CONFIG.MAP_HEIGHT / 2;
                         player.hp = player.maxHp;
                     } else {
+                        // Grant XP to player
+                        const xpGained = 20 + hit.level * 10;
+                        player.xp += xpGained;
+
+                        // Check for level up
+                        while (player.xp >= player.xpToNext) {
+                            player.xp -= player.xpToNext;
+                            player.level++;
+                            player.maxHp += 20;
+                            player.hp = player.maxHp;
+                            player.xpToNext = Math.floor(player.xpToNext * 1.5);
+                        }
+
                         // Spawn loot when NPC dies
                         const lootValue = rand(10, 30) + hit.level * 5;
                         const lootType = Math.random() < 0.7 ? 'gold' : 'jewelry';

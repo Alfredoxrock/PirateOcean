@@ -40,6 +40,8 @@ export function createPlayer(opts) {
         hp: 100,
         maxHp: 100,
         level: (opts && opts.level) || 1,
+        xp: 0,
+        xpToNext: 100,
         weaponRange: 420,
         cannonCooldown: 0,
         gold: 0,

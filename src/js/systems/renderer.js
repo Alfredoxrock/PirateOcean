@@ -3,7 +3,7 @@ import { clamp } from '../utils/math.js';
 import { CONFIG } from '../core/config.js';
 import { spriteManager } from '../systems/spriteManager.js';
 
-export function renderGame(ctx, camera, map, player, cannonballs, canvas, selectedShip = null, loot = []) {
+export function renderGame(ctx, camera, map, player, cannonballs, canvas, selectedShip = null, loot = [], effects = []) {
     ctx.save();
     ctx.fillStyle = '#0a2b45';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -75,25 +75,25 @@ export function renderGame(ctx, camera, map, player, cannonballs, canvas, select
         // Treasure chest
         ctx.save();
         ctx.translate(treasure.x, treasure.y);
-        
+
         // Chest base
         ctx.fillStyle = '#8B4513';
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 2;
         ctx.fillRect(-12, -8, 24, 16);
         ctx.strokeRect(-12, -8, 24, 16);
-        
+
         // Chest lid
         ctx.fillStyle = '#A0522D';
         ctx.fillRect(-12, -12, 24, 4);
         ctx.strokeRect(-12, -12, 24, 4);
-        
+
         // Lock
         ctx.fillStyle = '#FFD700';
         ctx.beginPath();
         ctx.arc(0, 0, 3, 0, Math.PI * 2);
         ctx.fill();
-        
+
         ctx.restore();
     }
 
@@ -182,6 +182,35 @@ export function renderGame(ctx, camera, map, player, cannonballs, canvas, select
                 ctx.fill();
                 ctx.stroke();
             }
+        }
+
+        ctx.restore();
+    }
+
+    // Visual effects
+    for (const effect of effects) {
+        ctx.save();
+        ctx.globalAlpha = effect.alpha;
+
+        if (effect.type === 'hit') {
+            // Red flash for hits
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(effect.x, effect.y, effect.radius, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (effect.type === 'explosion') {
+            // Orange expanding rings for explosions
+            ctx.strokeStyle = '#ff6600';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(effect.x, effect.y, effect.radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#ff9900';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(effect.x, effect.y, effect.radius * 0.7, 0, Math.PI * 2);
+            ctx.stroke();
         }
 
         ctx.restore();
@@ -303,4 +332,66 @@ function roundRect(ctx, x, y, w, h, r, fill, stroke) {
     ctx.closePath();
     if (fill) ctx.fill();
     if (stroke) ctx.stroke();
+}
+
+export function renderMinimap(map, player, camera, canvasWidth, canvasHeight) {
+    const minimapCanvas = document.getElementById('minimap');
+    if (!minimapCanvas) return;
+
+    const ctx = minimapCanvas.getContext('2d');
+    const w = minimapCanvas.width;
+    const h = minimapCanvas.height;
+    const scale = w / CONFIG.MAP_WIDTH;
+
+    // Clear
+    ctx.fillStyle = '#0a2b45';
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw islands
+    ctx.fillStyle = '#8b5a2b';
+    for (const island of map.islands) {
+        const x = island.x * scale;
+        const y = island.y * scale;
+        const r = island.r * scale;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Draw treasures
+    ctx.fillStyle = '#FFD700';
+    for (const treasure of map.treasures) {
+        const x = treasure.x * scale;
+        const y = treasure.y * scale;
+        ctx.beginPath();
+        ctx.arc(x, y, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Draw PvE ships
+    ctx.fillStyle = '#ff4444';
+    for (const ship of map.pveShips) {
+        const x = ship.x * scale;
+        const y = ship.y * scale;
+        ctx.beginPath();
+        ctx.arc(x, y, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Draw player
+    ctx.fillStyle = '#00ff00';
+    const px = player.x * scale;
+    const py = player.y * scale;
+    ctx.beginPath();
+    ctx.arc(px, py, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw viewport rectangle
+    const vx = camera.x * scale;
+    const vy = camera.y * scale;
+    const vw = canvasWidth * scale;
+    const vh = canvasHeight * scale;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(vx, vy, vw, vh);
 }
