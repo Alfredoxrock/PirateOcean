@@ -98,6 +98,24 @@ function updateHUD(stats) {
     if (stats.health !== undefined) {
         document.getElementById('hudHealth').textContent = 'Health: ' + Math.round(stats.health) + '%';
     }
+    if (stats.level !== undefined) {
+        document.getElementById('hudLevel').textContent = 'Level: ' + stats.level;
+    }
+    if (stats.tier !== undefined) {
+        document.getElementById('hudTier').textContent = 'Ship Tier: ' + stats.tier;
+    }
+    
+    // Update upgrade button
+    if (stats.tier !== undefined && stats.gold !== undefined) {
+        const upgradeBtn = document.getElementById('upgradeBtn');
+        if (upgradeBtn) {
+            const upgradeCost = Math.floor(100 * Math.pow(1.5, stats.tier));
+            const canUpgrade = stats.tier < 10 && stats.gold >= upgradeCost;
+            upgradeBtn.textContent = stats.tier >= 10 ? 'Max Tier' : 'Upgrade Ship (' + upgradeCost + ' gold)';
+            upgradeBtn.disabled = !canUpgrade;
+            upgradeBtn.style.opacity = canUpgrade ? '1' : '0.5';
+        }
+    }
 }
 
 // Settings Functions
@@ -136,6 +154,7 @@ function loadSettings() {
 document.addEventListener('DOMContentLoaded', function () {
     const musicSlider = document.getElementById('musicVolume');
     const sfxSlider = document.getElementById('sfxVolume');
+    const upgradeBtn = document.getElementById('upgradeBtn');
 
     if (musicSlider) {
         musicSlider.addEventListener('input', function () {
@@ -146,6 +165,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (sfxSlider) {
         sfxSlider.addEventListener('input', function () {
             document.getElementById('sfxValue').textContent = this.value + '%';
+        });
+    }
+
+    if (upgradeBtn) {
+        upgradeBtn.addEventListener('click', function () {
+            if (window.gameInstance && window.gameInstance.player) {
+                window.gameInstance.tryUpgrade();
+            }
         });
     }
 

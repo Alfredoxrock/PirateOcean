@@ -2,7 +2,7 @@
 import { CONFIG } from './config.js';
 import { clamp } from '../utils/math.js';
 import { generateIslands, generateCreatures, generateTreasures } from '../systems/mapGenerator.js';
-import { generatePveShips, createPlayer } from '../entities/Ship.js';
+import { generatePveShips, createPlayer, upgradeShip, canUpgradeShip } from '../entities/Ship.js';
 import { updatePlayerMovement, handleIslandCollisions, updateCamera } from '../systems/physics.js';
 import { updatePveShipAI, updateCannonballs, spawnCannonball } from '../systems/combat.js';
 import { renderGame, renderMinimap } from '../systems/renderer.js';
@@ -78,6 +78,28 @@ class Game {
         const pauseMenu = document.getElementById('pauseMenu');
         if (pauseMenu) {
             pauseMenu.style.display = this.paused ? 'flex' : 'none';
+        }
+    }
+
+    tryUpgrade() {
+        if (!this.player) return;
+        
+        if (canUpgradeShip(this.player)) {
+            upgradeShip(this.player);
+            this.updateHUDStats();
+        }
+    }
+
+    updateHUDStats() {
+        if (window.gameMenu && window.gameMenu.updateHUD && this.player) {
+            window.gameMenu.updateHUD({
+                health: clamp((this.player.hp / this.player.maxHp) * 100, 0, 100),
+                gold: this.player.gold,
+                jewelry: this.player.jewelry,
+                cannonballs: this.player.cannonballs,
+                level: this.player.level,
+                tier: this.player.tier
+            });
         }
     }
 
@@ -165,14 +187,7 @@ class Game {
         updateCamera(this.camera, this.player, this.canvas.width, this.canvas.height, this.keys, dt);
 
         // Update HUD
-        if (window.gameMenu && window.gameMenu.updateHUD) {
-            window.gameMenu.updateHUD({
-                health: clamp((this.player.hp / this.player.maxHp) * 100, 0, 100),
-                gold: this.player.gold,
-                jewelry: this.player.jewelry,
-                cannonballs: this.player.cannonballs
-            });
-        }
+        this.updateHUDStats();
     }
 
     draw() {
@@ -219,9 +234,7 @@ class Game {
         this.player = createPlayer(opts);
 
         // Initial HUD
-        if (window.gameMenu && window.gameMenu.updateHUD) {
-            window.gameMenu.updateHUD({ gold: 0, jewelry: 0, cannonballs: 50, health: 100 });
-        }
+        this.updateHUDStats();
 
         this.setupInput();
         this.running = true;
@@ -245,5 +258,6 @@ const gameInstance = new Game();
 window.Game = {
     start: (opts) => gameInstance.start(opts)
 };
+window.gameInstance = gameInstance;
 
 export default gameInstance;

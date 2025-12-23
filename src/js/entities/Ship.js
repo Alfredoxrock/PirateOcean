@@ -42,10 +42,34 @@ export function createPlayer(opts) {
         level: (opts && opts.level) || 1,
         xp: 0,
         xpToNext: 100,
+        tier: 1, // Ship tier (1-10)
         weaponRange: 420,
         cannonCooldown: 0,
         gold: 0,
         jewelry: 0,
         cannonballs: 50
     };
+}
+
+export function getUpgradeCost(currentTier) {
+    return Math.floor(100 * Math.pow(1.5, currentTier));
+}
+
+export function canUpgradeShip(player) {
+    return player.tier < 10 && player.gold >= getUpgradeCost(player.tier);
+}
+
+export function upgradeShip(player) {
+    if (!canUpgradeShip(player)) return false;
+
+    const cost = getUpgradeCost(player.tier);
+    player.gold -= cost;
+    player.tier++;
+
+    // Upgrade stats based on tier
+    player.maxHp += 25;
+    player.hp = player.maxHp;
+    player.weaponRange += 20;
+
+    return true;
 }
