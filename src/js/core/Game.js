@@ -63,7 +63,10 @@ class Game {
         // Update HUD
         if (window.gameMenu && window.gameMenu.updateHUD) {
             window.gameMenu.updateHUD({
-                health: clamp((this.player.hp / this.player.maxHp) * 100, 0, 100)
+                health: clamp((this.player.hp / this.player.maxHp) * 100, 0, 100),
+                gold: this.player.gold,
+                jewelry: this.player.jewelry,
+                cannonballs: this.player.cannonballs
             });
         }
     }
@@ -111,7 +114,7 @@ class Game {
 
         // Initial HUD
         if (window.gameMenu && window.gameMenu.updateHUD) {
-            window.gameMenu.updateHUD({ level: 1, gold: 0, health: 100 });
+            window.gameMenu.updateHUD({ gold: 0, jewelry: 0, cannonballs: 50, health: 100 });
         }
 
         this.setupInput();

@@ -41,9 +41,6 @@ function startGame() {
     // Store player name
     localStorage.setItem('playerName', playerName);
 
-    // Update HUD with player name
-    document.getElementById('hudPlayerName').textContent = playerName;
-
     // Hide menus and show game
     hideAllMenus();
     document.getElementById('gameContainer').style.display = 'block';
@@ -56,7 +53,7 @@ function initializeGame() {
     console.log('Starting lightweight game engine...');
 
     // Update HUD with initial values
-    updateHUD({ level: 1, gold: 0, health: 100, xp: 0 });
+    updateHUD({ gold: 0, jewelry: 0, cannonballs: 50, health: 100 });
 
     // Start the Game engine we added in game.js
     try {
@@ -89,17 +86,17 @@ function exitToMainMenu() {
 
 // Update HUD values
 function updateHUD(stats) {
-    if (stats.level !== undefined) {
-        document.getElementById('hudLevel').textContent = stats.level;
-    }
     if (stats.gold !== undefined) {
-        document.getElementById('hudGold').textContent = stats.gold.toLocaleString();
+        document.getElementById('hudGold').textContent = 'Gold: ' + stats.gold.toLocaleString();
+    }
+    if (stats.jewelry !== undefined) {
+        document.getElementById('hudJewelry').textContent = 'Jewelry: ' + stats.jewelry.toLocaleString();
+    }
+    if (stats.cannonballs !== undefined) {
+        document.getElementById('hudCannonballs').textContent = 'Cannonballs: ' + stats.cannonballs;
     }
     if (stats.health !== undefined) {
-        document.getElementById('healthFill').style.width = stats.health + '%';
-    }
-    if (stats.xp !== undefined) {
-        document.getElementById('xpFill').style.width = stats.xp + '%';
+        document.getElementById('hudHealth').textContent = 'Health: ' + Math.round(stats.health) + '%';
     }
 }
 
