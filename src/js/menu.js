@@ -104,7 +104,7 @@ function updateHUD(stats) {
     if (stats.tier !== undefined) {
         document.getElementById('hudTier').textContent = 'Ship Tier: ' + stats.tier;
     }
-    
+
     // Update upgrade button
     if (stats.tier !== undefined && stats.gold !== undefined) {
         const upgradeBtn = document.getElementById('upgradeBtn');

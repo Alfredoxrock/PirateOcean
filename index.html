@@ -290,6 +290,8 @@
             <div id="hudHealth">Health: 100%</div>
             <div id="hudLevel">Level: 1</div>
             <div id="hudTier">Ship Tier: 1</div>
+            <div id="hudObjective" style="margin-top: 15px; font-weight: bold; color: #FFD700;">Objective: Collect 1000
+                gold</div>
             <button id="upgradeBtn" style="margin-top: 10px; padding: 5px 10px; cursor: pointer;">Upgrade Ship</button>
         </div>
 
@@ -299,6 +301,16 @@
                 <h2>Paused</h2>
                 <button class="menu-btn" onclick="resumeGame()">Resume</button>
                 <button class="menu-btn" onclick="exitToMainMenu()">Exit to Menu</button>
+            </div>
+        </div>
+
+        <!-- Victory Menu -->
+        <div id="victoryMenu" class="overlay-menu" style="display: none;">
+            <div class="overlay-content">
+                <h2 style="color: #FFD700;">🏆 Victory! 🏆</h2>
+                <p id="victoryMessage">You completed the objective!</p>
+                <div id="victoryStats" style="margin: 20px 0; text-align: left;"></div>
+                <button class="menu-btn" onclick="exitToMainMenu()">Back to Menu</button>
             </div>
         </div>
     </div>

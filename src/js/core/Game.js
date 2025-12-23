@@ -23,6 +23,7 @@ class Game {
         this.paused = false;
         this.lastTime = 0;
         this.selectedShip = null;
+        this.objective = { type: 'gold', target: 1000, completed: false };
     }
 
     setupInput() {
@@ -83,7 +84,7 @@ class Game {
 
     tryUpgrade() {
         if (!this.player) return;
-        
+
         if (canUpgradeShip(this.player)) {
             upgradeShip(this.player);
             this.updateHUDStats();
@@ -186,8 +187,40 @@ class Game {
         // Update camera
         updateCamera(this.camera, this.player, this.canvas.width, this.canvas.height, this.keys, dt);
 
+        // Check victory condition
+        this.checkVictory();
+
         // Update HUD
         this.updateHUDStats();
+    }
+
+    checkVictory() {
+        if (this.objective.completed) return;
+
+        if (this.objective.type === 'gold' && this.player.gold >= this.objective.target) {
+            this.objective.completed = true;
+            this.showVictory();
+        }
+    }
+
+    showVictory() {
+        this.paused = true;
+        const victoryMenu = document.getElementById('victoryMenu');
+        const victoryStats = document.getElementById('victoryStats');
+
+        if (victoryStats) {
+            victoryStats.innerHTML = `
+                <p><strong>Final Stats:</strong></p>
+                <p>Gold: ${this.player.gold}</p>
+                <p>Jewelry: ${this.player.jewelry}</p>
+                <p>Level: ${this.player.level}</p>
+                <p>Ship Tier: ${this.player.tier}</p>
+            `;
+        }
+
+        if (victoryMenu) {
+            victoryMenu.style.display = 'flex';
+        }
     }
 
     draw() {
